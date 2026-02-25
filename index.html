@@ -1,0 +1,2568 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Serom Medical - Sunshine ACT 9.3 (Firebase)</title>
+  <!-- Firebase SDK (moduli compatibili) -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  <!-- Librerie ausiliarie -->
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+  <style>
+    /* Variabili e reset (identico all'originale) */
+    :root { 
+      --primary: #2c3e50; 
+      --secondary: #3498db; 
+      --success: #27ae60; 
+      --danger: #e74c3c; 
+      --bg: #f4f7f6; 
+      --purple: #8e44ad; 
+      --warning: #f39c12;
+      --light: #ecf0f1;
+      --dark: #2c3e50;
+      --border: #ddd;
+      --shadow: 0 4px 15px rgba(0,0,0,0.08);
+      --soglia-annuale-bg: #fff3cd;
+      --soglia-annuale-text: #856404;
+      --soglia-singola-bg: #f8d7da;
+      --soglia-singola-text: #721c24;
+      --sotto-soglia-bg: #d4edda;
+      --sotto-soglia-text: #155724;
+      --inviato-bg: #cce5ff;
+      --inviato-text: #004085;
+    }
+    
+    * { box-sizing: border-box; }
+    
+    body { 
+      font-family: 'Segoe UI', Roboto, system-ui, -apple-system, sans-serif; 
+      background: var(--bg); 
+      margin: 0; 
+      padding: 20px; 
+      color: #333;
+      line-height: 1.5;
+    }
+    
+    /* Header */
+    header { 
+      background: linear-gradient(135deg, var(--primary), #34495e); 
+      color: white; 
+      padding: 20px 30px; 
+      border-radius: 16px; 
+      display: flex; 
+      justify-content: space-between; 
+      align-items: center; 
+      box-shadow: var(--shadow);
+      margin-bottom: 25px;
+    }
+    
+    header h1 { 
+      margin: 0; 
+      font-size: 1.8rem;
+      font-weight: 500;
+    }
+    
+    header .badge {
+      font-size: 0.5em; 
+      background: var(--warning); 
+      color: #000; 
+      padding: 4px 12px; 
+      border-radius: 30px; 
+      vertical-align: middle;
+      font-weight: 600;
+      margin-left: 15px;
+    }
+    
+    header p { 
+      margin: 5px 0 0 0; 
+      opacity: 0.8; 
+      font-size: 0.95rem;
+    }
+    
+    /* Tabs principali */
+    .tabs { 
+      display: flex; 
+      gap: 8px; 
+      margin: 0 0 25px 0; 
+      background: white; 
+      padding: 10px; 
+      border-radius: 50px; 
+      box-shadow: var(--shadow);
+      flex-wrap: wrap;
+      position: relative;
+    }
+    
+    .tab { 
+      padding: 12px 28px; 
+      border: none; 
+      cursor: pointer; 
+      border-radius: 40px; 
+      font-weight: 600; 
+      font-size: 0.95rem;
+      letter-spacing: 0.3px;
+      background: transparent;
+      color: var(--dark);
+      transition: 0.2s;
+      position: relative;
+    }
+    
+    .tab:hover {
+      background: rgba(52, 152, 219, 0.1);
+      color: var(--secondary);
+    }
+    
+    .tab.active { 
+      background: var(--secondary); 
+      color: white; 
+      box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
+    }
+    
+    .notification-badge {
+      position: absolute;
+      top: -5px;
+      right: -5px;
+      background: var(--danger);
+      color: white;
+      border-radius: 50%;
+      min-width: 20px;
+      height: 20px;
+      font-size: 0.7rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 4px;
+      font-weight: bold;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+    
+    /* Panels */
+    .panel { 
+      display: none; 
+      background: white; 
+      padding: 30px; 
+      border-radius: 20px; 
+      box-shadow: var(--shadow);
+      margin-top: 10px;
+      animation: fadeIn 0.3s ease;
+    }
+    
+    .panel.active { 
+      display: block; 
+    }
+    
+    @keyframes fadeIn { 
+      from { opacity: 0; transform: translateY(10px); } 
+      to { opacity: 1; transform: translateY(0); } 
+    }
+    
+    /* Dashboard Cards */
+    .dashboard-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+    
+    .anno-selector {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: #f8fafc;
+      padding: 8px 16px;
+      border-radius: 50px;
+      border: 1px solid #eef2f6;
+    }
+    
+    .anno-selector label {
+      font-weight: 600;
+      color: var(--primary);
+      font-size: 0.9rem;
+    }
+    
+    .anno-selector select {
+      height: 36px;
+      padding: 0 30px 0 12px;
+      border: 1px solid #dde4e9;
+      border-radius: 30px;
+      font-size: 0.9rem;
+      background: white;
+      appearance: none;
+      background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23333' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+      background-size: 14px;
+    }
+    
+    .dashboard-grid { 
+      display: grid; 
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); 
+      gap: 16px; 
+      margin: 20px 0;
+    }
+    
+    .stat-card { 
+      background: white; 
+      padding: 18px; 
+      border-radius: 14px; 
+      border-left: 5px solid var(--secondary); 
+      box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+      transition: 0.2s;
+    }
+    
+    .stat-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+    }
+    
+    .stat-card h4 { 
+      margin: 0; 
+      font-size: 0.8rem; 
+      color: #7f8c8d; 
+      text-transform: uppercase; 
+      letter-spacing: 0.4px;
+    }
+    
+    .stat-card .val { 
+      font-size: 1.8rem; 
+      font-weight: 600; 
+      margin-top: 8px; 
+      color: var(--dark);
+    }
+    
+    /* Soglie Dashboard Section */
+    .dashboard-section {
+      margin-top: 25px;
+      padding: 20px;
+      background: #f8fafc;
+      border-radius: 16px;
+      border: 1px solid #eef2f6;
+    }
+    
+    .dashboard-section h4 {
+      margin: 0 0 16px 0;
+      color: var(--primary);
+      font-weight: 600;
+      font-size: 1.1rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .dashboard-section h4:before {
+      content: '🚦';
+      font-size: 1.2rem;
+    }
+    
+    /* Tabs secondari per soglie */
+    .soglie-tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+      border-bottom: 2px solid #eef2f6;
+      padding-bottom: 8px;
+    }
+    
+    .soglia-tab {
+      padding: 6px 16px;
+      border: none;
+      background: transparent;
+      border-radius: 30px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: 0.2s;
+      color: var(--dark);
+      font-size: 0.85rem;
+    }
+    
+    .soglia-tab:hover {
+      background: rgba(52, 152, 219, 0.1);
+    }
+    
+    .soglia-tab.active {
+      background: var(--secondary);
+      color: white;
+    }
+    
+    .soglia-content {
+      display: none;
+    }
+    
+    .soglia-content.active {
+      display: block;
+    }
+    
+    .soglia-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.75rem;
+    }
+    
+    .soglia-table th {
+      background: #f1f5f9;
+      padding: 8px 6px;
+      text-align: left;
+      font-weight: 600;
+      color: var(--primary);
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      font-size: 0.7rem;
+    }
+    
+    .soglia-table td {
+      padding: 6px;
+      border-bottom: 1px solid #eef2f6;
+    }
+    
+    .soglia-table tr:hover td {
+      background: #fafdff;
+    }
+    
+    .badge-superato {
+      background: var(--soglia-singola-bg);
+      color: var(--soglia-singola-text);
+      padding: 3px 8px;
+      border-radius: 30px;
+      font-size: 0.65rem;
+      font-weight: 600;
+    }
+    
+    .badge-non-superato {
+      background: var(--sotto-soglia-bg);
+      color: var(--sotto-soglia-text);
+      padding: 3px 8px;
+      border-radius: 30px;
+      font-size: 0.65rem;
+      font-weight: 600;
+    }
+    
+    .badge-inviato {
+      background: var(--inviato-bg);
+      color: var(--inviato-text);
+      padding: 3px 8px;
+      border-radius: 30px;
+      font-size: 0.65rem;
+      font-weight: 600;
+    }
+    
+    .soglia-alert-container {
+      max-height: 180px;
+      overflow-y: auto;
+      border-radius: 12px;
+      margin-top: 12px;
+    }
+    
+    .soglia-annuale-box {
+      background: var(--soglia-annuale-bg);
+      color: var(--soglia-annuale-text);
+      padding: 10px;
+      border-radius: 8px;
+      margin-bottom: 8px;
+    }
+    
+    .soglia-singola-box {
+      background: var(--soglia-singola-bg);
+      color: var(--soglia-singola-text);
+      padding: 10px;
+      border-radius: 8px;
+      margin-bottom: 8px;
+    }
+    
+    .soglia-item {
+      padding: 4px;
+      border-bottom: 1px solid rgba(0,0,0,0.1);
+      font-size: 0.75rem;
+    }
+    
+    .soglia-item:last-child {
+      border-bottom: none;
+    }
+    
+    /* Form Layout - TUTTI I CAMPI STESSA DIMENSIONE */
+    .form-section {
+      background: #f8fafc;
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 25px;
+      border: 1px solid #eef2f6;
+    }
+    
+    .form-section h4 {
+      margin: 0 0 16px 0;
+      color: var(--primary);
+      font-weight: 600;
+      font-size: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .form-section h4:before {
+      content: '';
+      width: 4px;
+      height: 18px;
+      background: var(--secondary);
+      border-radius: 4px;
+      display: inline-block;
+    }
+    
+    .form-grid { 
+      display: grid; 
+      grid-template-columns: repeat(4, 1fr); 
+      gap: 12px; 
+    }
+    
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      width: 100%;
+    }
+    
+    .form-group label {
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: #5d6d7e;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+    
+    /* TUTTI GLI INPUT E SELECT STESSA DIMENSIONE */
+    .form-group input,
+    .form-group select,
+    .form-group input[list] {
+      width: 100%;
+      height: 42px;
+      padding: 0 12px;
+      border: 1px solid #dde4e9;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      transition: 0.2s;
+      background: white;
+      line-height: 42px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+    }
+    
+    /* Altezza uniforme per tutti i campi */
+    select {
+      height: 42px;
+      appearance: none;
+      background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23333' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+      background-size: 14px;
+      padding-right: 35px;
+    }
+    
+    .form-group input:focus,
+    .form-group select:focus {
+      outline: none;
+      border-color: var(--secondary);
+      box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.15);
+    }
+    
+    .form-group input[readonly] {
+      background: #f1f5f9;
+      border-color: #d0d9e2;
+      color: #3a4a5a;
+    }
+    
+    /* Stile per i campi con datalist */
+    input[list] {
+      background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23333' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+      background-size: 14px;
+      padding-right: 35px;
+    }
+    
+    datalist {
+      display: none;
+    }
+    
+    /* Alert per soglie in tempo reale */
+    .soglia-alert {
+      padding: 10px;
+      border-radius: 8px;
+      margin: 8px 0;
+      display: none;
+      font-weight: 500;
+      font-size: 0.85rem;
+    }
+    
+    .soglia-alert.warning {
+      background: var(--soglia-annuale-bg);
+      color: var(--soglia-annuale-text);
+      display: block;
+    }
+    
+    .soglia-alert.danger {
+      background: var(--soglia-singola-bg);
+      color: var(--soglia-singola-text);
+      display: block;
+    }
+    
+    .full-width {
+      grid-column: 1 / -1;
+    }
+    
+    .btn-main { 
+      background: var(--secondary); 
+      color: white; 
+      border: none; 
+      font-weight: 600; 
+      cursor: pointer; 
+      height: 42px;
+      padding: 0 24px; 
+      border-radius: 10px; 
+      font-size: 0.85rem;
+      letter-spacing: 0.4px;
+      transition: 0.2s;
+      box-shadow: 0 4px 10px rgba(52, 152, 219, 0.3);
+      min-width: 160px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .btn-main:hover {
+      background: #2980b9;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 14px rgba(52, 152, 219, 0.4);
+    }
+    
+    .btn-main.small {
+      height: 36px;
+      padding: 0 16px;
+      font-size: 0.8rem;
+    }
+    
+    .btn-success {
+      background: var(--success);
+      box-shadow: 0 4px 10px rgba(39, 174, 96, 0.3);
+    }
+    
+    .btn-success:hover {
+      background: #219a52;
+    }
+    
+    .btn-purple {
+      background: var(--purple);
+      box-shadow: 0 4px 10px rgba(142, 68, 173, 0.3);
+    }
+    
+    .btn-purple:hover {
+      background: #7d3c98;
+    }
+    
+    .btn-warning {
+      background: var(--warning);
+      color: #000;
+      box-shadow: 0 4px 10px rgba(243, 156, 18, 0.3);
+    }
+    
+    .btn-warning:hover {
+      background: #e67e22;
+      color: white;
+    }
+    
+    .btn-danger {
+      background: var(--danger);
+      color: white;
+      box-shadow: 0 4px 10px rgba(231, 76, 60, 0.3);
+    }
+    
+    .btn-danger:hover {
+      background: #c0392b;
+    }
+    
+    /* Table Controls */
+    .table-controls { 
+      display: flex; 
+      justify-content: space-between; 
+      align-items: center; 
+      margin-bottom: 16px; 
+      gap: 12px; 
+      flex-wrap: wrap; 
+      background: #f8fafc;
+      padding: 10px 16px;
+      border-radius: 12px;
+    }
+    
+    .search-input { 
+      height: 38px;
+      padding: 0 14px 0 38px; 
+      border-radius: 30px; 
+      border: 1px solid #dde4e9; 
+      width: 230px; 
+      font-size: 0.85rem;
+      background: white url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="%23999" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>') no-repeat 14px center;
+    }
+    
+    .btn-export, .btn-action, .btn-bulk-del {
+      border: none;
+      height: 36px;
+      padding: 0 14px;
+      border-radius: 30px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.8rem;
+      transition: 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+    
+    .btn-export {
+      background: var(--success);
+      color: white;
+    }
+    
+    .btn-bulk-del {
+      background: var(--danger);
+      color: white;
+    }
+    
+    .btn-action {
+      background: transparent;
+      color: var(--dark);
+      height: 30px;
+      padding: 0 5px;
+      font-size: 0.95rem;
+    }
+    
+    .btn-action:hover {
+      background: rgba(0,0,0,0.05);
+      transform: scale(1.1);
+    }
+    
+    /* Tables - RIDOTTA ALTEZZA RIGHE PER MOSTRARE PIU RECORD */
+    .grid-container { 
+      overflow-x: auto; 
+      overflow-y: auto;
+      border-radius: 14px; 
+      border: 1px solid #eef2f6; 
+      max-height: 450px; 
+      box-shadow: 0 4px 10px rgba(0,0,0,0.02);
+    }
+    
+    table { 
+      width: 100%; 
+      border-collapse: collapse; 
+      font-size: 0.7rem; 
+      min-width: 1300px; 
+    }
+    
+    th { 
+      background: #f8fafc; 
+      padding: 8px 5px; 
+      text-align: left; 
+      border-bottom: 2px solid #e2e8f0; 
+      color: var(--primary); 
+      position: sticky; 
+      top: 0; 
+      z-index: 10; 
+      font-weight: 600;
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+    
+    td { 
+      padding: 6px 5px; 
+      border-bottom: 1px solid #edf2f7; 
+      background: white; 
+    }
+    
+    tr:hover td {
+      background: #fafdff;
+    }
+    
+    .locked-row { 
+      background-color: #fff9e6 !important; 
+    }
+    
+    .lock-icon {
+      color: #f1c40f;
+      margin-right: 3px;
+      font-size: 0.8rem;
+    }
+    
+    /* Badge status */
+    .status-badge {
+      display: inline-block;
+      padding: 3px 6px;
+      border-radius: 30px;
+      font-size: 0.6rem;
+      font-weight: 600;
+      background: #f1f5f9;
+      color: #475569;
+    }
+    
+    .status-badge.inviato {
+      background: #fef3c7;
+      color: #92400e;
+    }
+    
+    .status-badge.attesa {
+      background: #dbeafe;
+      color: #1e40af;
+    }
+    
+    /* Filter bar */
+    .filter-bar {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      background: white;
+      padding: 6px 14px;
+      border-radius: 50px;
+      border: 1px solid #eef2f6;
+    }
+    
+    .filter-bar input[type="date"] {
+      height: 34px;
+      padding: 0 8px;
+      border: 1px solid #dde4e9;
+      border-radius: 30px;
+      font-size: 0.8rem;
+    }
+    
+    /* Log display */
+    #logDisplay {
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 0.7rem;
+      background: #1e293b;
+      color: #e2e8f0;
+      padding: 12px;
+      border-radius: 14px;
+      max-height: 280px;
+      overflow-y: auto;
+      line-height: 1.5;
+    }
+    
+    #logDisplay div {
+      padding: 4px 0;
+      border-bottom: 1px solid #334155;
+    }
+    
+    /* Import section */
+    .import-grid {
+      display: grid;
+      grid-template-columns: 1fr 2fr auto;
+      gap: 12px;
+      align-items: end;
+    }
+    
+    /* XML Riepilogo - ESPANDIBILE */
+    .xml-riepilogo {
+      margin-top: 16px;
+      background: #f8fafc;
+      border-radius: 12px;
+      padding: 12px;
+    }
+    
+    .xml-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      padding: 8px 12px;
+      background: #f1f5f9;
+      border-radius: 8px;
+      transition: 0.2s;
+    }
+    
+    .xml-header:hover {
+      background: #e2e8f0;
+    }
+    
+    .xml-header h5 {
+      margin: 0;
+      color: var(--primary);
+      font-size: 0.9rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .xml-header .toggle-icon {
+      font-size: 1rem;
+      transition: transform 0.3s;
+    }
+    
+    .xml-header.expanded .toggle-icon {
+      transform: rotate(90deg);
+    }
+    
+    .xml-content {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease-out;
+      margin-top: 0;
+    }
+    
+    .xml-content.expanded {
+      max-height: 2000px;
+      transition: max-height 0.5s ease-in;
+      margin-top: 12px;
+    }
+    
+    .xml-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.7rem;
+    }
+    
+    .xml-table th {
+      background: #e2e8f0;
+      padding: 6px;
+      text-align: left;
+      font-weight: 600;
+      color: var(--primary);
+      position: sticky;
+      top: 0;
+      font-size: 0.65rem;
+    }
+    
+    .xml-table td {
+      padding: 5px 6px;
+      border-bottom: 1px solid #cbd5e1;
+    }
+    
+    .record-superato {
+      background-color: rgba(231, 76, 60, 0.05);
+      border-left: 2px solid var(--danger);
+    }
+    
+    .record-ok {
+      background-color: rgba(39, 174, 96, 0.02);
+    }
+    
+    .semestre-badge {
+      background: var(--primary);
+      color: white;
+      padding: 2px 8px;
+      border-radius: 20px;
+      font-size: 0.65rem;
+      margin-left: 8px;
+    }
+    
+    /* Responsive */
+    @media (max-width: 768px) {
+      .form-grid,
+      .import-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      header {
+        flex-direction: column;
+        gap: 12px;
+        text-align: center;
+      }
+      
+      .tabs {
+        border-radius: 16px;
+      }
+      
+      .soglie-tabs {
+        flex-wrap: wrap;
+      }
+      
+      .grid-container {
+        max-height: 350px;
+      }
+    }
+
+    /* Login screen */
+    #login-screen {
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: linear-gradient(135deg, var(--primary), #1e2b38);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+      transition: opacity 0.3s ease;
+    }
+    #login-screen.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+    .login-card {
+      background: white;
+      padding: 40px 30px;
+      border-radius: 30px;
+      box-shadow: var(--shadow);
+      max-width: 380px;
+      width: 90%;
+      text-align: center;
+    }
+    .login-card h2 {
+      color: var(--primary);
+      margin-top: 0;
+      font-weight: 500;
+      font-size: 1.8rem;
+    }
+    .login-card p {
+      color: #5f6b7a;
+      margin-bottom: 25px;
+      font-size: 0.9rem;
+    }
+    .login-card input {
+      width: 100%;
+      height: 50px;
+      padding: 0 16px;
+      border: 2px solid #e0e7ef;
+      border-radius: 40px;
+      font-size: 1rem;
+      margin-bottom: 20px;
+      transition: 0.2s;
+    }
+    .login-card input:focus {
+      outline: none;
+      border-color: var(--secondary);
+      box-shadow: 0 0 0 3px rgba(52,152,219,0.2);
+    }
+    .login-card button {
+      width: 100%;
+      height: 50px;
+      background: var(--secondary);
+      color: white;
+      border: none;
+      border-radius: 40px;
+      font-size: 1.1rem;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 6px 14px rgba(52,152,219,0.3);
+      transition: 0.2s;
+    }
+    .login-card button:hover {
+      background: #2980b9;
+      transform: translateY(-2px);
+    }
+    .login-error {
+      color: var(--danger);
+      font-size: 0.85rem;
+      margin-top: 10px;
+      min-height: 20px;
+    }
+    .logout-btn {
+      background: transparent;
+      color: white;
+      border: 1px solid rgba(255,255,255,0.3);
+      padding: 8px 16px;
+      border-radius: 30px;
+      cursor: pointer;
+      font-size: 0.8rem;
+      transition: 0.2s;
+    }
+    .logout-btn:hover {
+      background: rgba(255,255,255,0.2);
+    }
+  </style>
+</head>
+<body>
+
+<!-- LOGIN SCREEN -->
+<div id="login-screen">
+  <div class="login-card">
+    <h2>🔐 Sunshine ACT</h2>
+    <p>Serom Medical Technology s.r.l. v9.3</p>
+    <input type="password" id="login-password" placeholder="Inserisci password di accesso" autofocus>
+    <button onclick="checkLogin()">ACCEDI</button>
+    <div id="login-error" class="login-error"></div>
+  </div>
+</div>
+
+<!-- MAIN APP (nascosto fino al login) -->
+<div id="app-main" style="display: none;">
+  <header>
+    <div>
+      <h1>Serom Medical Technology s.r.l. <span class="badge">v9.3</span></h1>
+      <p>☀️ Sunshine ACT Italia - Gestione Trasparenza 2026</p>
+    </div>
+    <div style="display: flex; gap: 10px; align-items: center;">
+      <button onclick="exportFullBackup()" class="btn-export" style="background: white; color: var(--primary);">💾 BACKUP COMPLETO</button>
+      <button onclick="logout()" class="logout-btn">🚪 LOGOUT</button>
+    </div>
+  </header>
+
+  <nav class="tabs">
+    <button class="tab active" data-tab="dash">📊 DASHBOARD</button>
+    <button class="tab" data-tab="hcp">👤 HCP</button>
+    <button class="tab" data-tab="hco">🏥 HCO</button>
+    <button class="tab" data-tab="erogazioni">📋 CATEGORIE</button>
+    <button class="tab" data-tab="tov" id="tovTab">💰 REGISTRO TOV</button>
+    <button class="tab" data-tab="import">📎 IMPORTA/LOGS</button>
+    <button class="tab" data-tab="xml">📄 ESPORTA XML</button>
+  </nav>
+
+  <main>
+    <!-- DASHBOARD -->
+    <section id="dash" class="panel active">
+      <div class="dashboard-header">
+        <h3>📈 Riepilogo Attività</h3>
+        <div class="anno-selector">
+          <label>Anno:</label>
+          <select id="annoDashboard" onchange="aggiornaDashboardPerAnno()">
+            <option value="2024">2024</option>
+            <option value="2025">2025</option>
+            <option value="2026" selected>2026</option>
+            <option value="2027">2027</option>
+          </select>
+        </div>
+      </div>
+      
+      <div class="dashboard-grid">
+        <div class="stat-card"><h4>Trasferimenti Totali</h4><div id="stat_tov_count" class="val">0</div></div>
+        <div class="stat-card" style="border-left-color: var(--success);"><h4>Volume Imponibile</h4><div id="stat_tov_sum" class="val">€ 0,00</div></div>
+        <div class="stat-card" style="border-left-color: var(--purple);"><h4>Anagrafiche Totali</h4><div id="stat_ana_count" class="val">0</div></div>
+        <div class="stat-card" style="border-left-color: var(--warning);"><h4>Record in Attesa</h4><div id="stat_pending" class="val">0</div></div>
+      </div>
+      
+      <!-- SEZIONE SOGLIE DASHBOARD -->
+      <div class="dashboard-section">
+        <h4>🚦 Controllo Soglie di Rendicontazione <span id="annoSoglie"></span></h4>
+        <div style="display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap;">
+          <button onclick="verificaSoglie()" class="btn-main small btn-warning">🔍 VERIFICA SOGLIE</button>
+          <button onclick="esportaReportSoglie()" class="btn-main small" style="background: var(--primary);">📊 ESPORTA REPORT SOGLIE</button>
+        </div>
+        
+        <div class="soglie-tabs">
+          <button class="soglia-tab active" onclick="mostraTabSoglie('hcp')">👤 HCP</button>
+          <button class="soglia-tab" onclick="mostraTabSoglie('hco')">🏥 HCO</button>
+        </div>
+        
+        <div id="soglieHCP" class="soglia-content active">
+          <div style="max-height: 280px; overflow-y: auto;">
+            <table class="soglia-table">
+              <thead><tr><th>Destinatario</th><th>CF</th><th>Totale Annuale</th><th>Soglia (€ 1.000)</th><th>Stato</th></tr></thead>
+              <tbody id="soglieHCPBody"><tr><td colspan="5" style="text-align:center; padding:12px;">Clicca su "VERIFICA SOGLIE" per visualizzare i dati</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+        
+        <div id="soglieHCO" class="soglia-content">
+          <div style="max-height: 280px; overflow-y: auto;">
+            <table class="soglia-table">
+              <thead><tr><th>Destinatario</th><th>P.IVA/CF</th><th>Totale Annuale</th><th>Soglia (€ 2.500)</th><th>Stato</th></tr></thead>
+              <tbody id="soglieHCOBody"><tr><td colspan="5" style="text-align:center; padding:12px;">Clicca su "VERIFICA SOGLIE" per visualizzare i dati</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+        
+        <div id="soglieAlertContainer" class="soglia-alert-container"></div>
+      </div>
+      
+      <div class="dashboard-section">
+        <h4>📤 Riepilogo Record Inviati con XML</h4>
+        <div class="riepilogo-inviati" id="riepilogoInviati" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 16px;"></div>
+      </div>
+      
+      <div class="dashboard-section">
+        <h4>📚 Archivio Trasmissioni XML per Semestre</h4>
+        <div style="display: flex; gap: 10px; margin-bottom: 16px; align-items: center;">
+          <div class="anno-selector" style="padding: 5px 12px;">
+            <label>Anno:</label>
+            <select id="archivioAnno" onchange="caricaArchivioSemestri()">
+              <option value="2024">2024</option>
+              <option value="2025">2025</option>
+              <option value="2026" selected>2026</option>
+              <option value="2027">2027</option>
+            </select>
+          </div>
+          <span class="semestre-badge" id="totaliAnno">Caricamento...</span>
+        </div>
+        <div id="archivioSemestriContainer"><div style="text-align:center; padding:20px;">Seleziona un anno per visualizzare l'archivio</div></div>
+      </div>
+      
+      <div style="display:flex; gap:12px; flex-wrap:wrap; margin:20px 0;">
+        <button onclick="downloadTemplateExcel()" class="btn-main small" style="background: var(--secondary);">📥 SCARICA MODELLO</button>
+        <button onclick="exportFullBackup()" class="btn-main small" style="background: var(--primary);">💾 BACKUP COMPLETO</button>
+      </div>
+      <div style="background: #f8fafc; padding:12px 16px; border-radius:10px;">
+        <p style="margin:0; font-size:0.85rem;">🔒 I record evidenziati in <span style="background:#fff9e6; padding:3px 8px; border-radius:20px;">giallo</span> sono già stati esportati in XML e richiedono password per modifiche/eliminazioni.</p>
+      </div>
+    </section>
+
+    <!-- HCP -->
+    <section id="hcp" class="panel">
+      <div class="table-controls">
+        <h3 style="margin:0;">👤 Anagrafica HCP</h3>
+        <div style="display:flex; gap:10px;">
+          <input type="text" class="search-input" id="search_hcp" placeholder="Cerca HCP..." oninput="renderAll()">
+          <button class="btn-export" onclick="exportToExcel('hcp')">📥 Excel HCP</button>
+          <button id="btn_del_hcp" class="btn-bulk-del" onclick="bulkDelete('hcp')" style="display:none;">🗑️ ELIMINA SELEZ.</button>
+        </div>
+      </div>
+      
+      <div class="form-section">
+        <h4>➕ Nuovo HCP</h4>
+        <form id="hcpForm" class="form-grid">
+          <div class="form-group"><label>Codice Fiscale *</label><input id="hcp_cf" placeholder="es. RSSMRA80A01H501I" required maxlength="16" style="text-transform: uppercase;"></div>
+          <div class="form-group"><label>Nome *</label><input id="hcp_nome" placeholder="Nome" required></div>
+          <div class="form-group"><label>Cognome *</label><input id="hcp_cognome" placeholder="Cognome" required></div>
+          <div class="form-group"><label>Indirizzo</label><input id="hcp_indirizzo" placeholder="Via, n°"></div>
+          <div class="form-group"><label>Comune</label><input id="hcp_comune" placeholder="Comune"></div>
+          <div class="form-group"><label>Prov</label><input id="hcp_prov" placeholder="RM" maxlength="2"></div>
+          <div class="form-group"><label>CAP</label><input id="hcp_cap" placeholder="00100" maxlength="5"></div>
+          <div class="form-group"><label>Albo</label><input id="hcp_albo" placeholder="Ordine dei Medici"></div>
+          <div class="form-group"><label>N. Iscrizione</label><input id="hcp_num_iscr" placeholder="12345"></div>
+          <div class="form-group"><label>Specializzazione</label><input id="hcp_spec" placeholder="Seleziona o digita..." list="hcp_spec_list"><datalist id="hcp_spec_list"></datalist></div>
+          <div class="form-group full-width" style="display: flex; justify-content: flex-end;"><button type="submit" class="btn-main">➕ AGGIUNGI HCP</button></div>
+        </form>
+      </div>
+      
+      <div class="grid-container"><table id="hcpTable"></table></div>
+    </section>
+
+    <!-- HCO -->
+    <section id="hco" class="panel">
+      <div class="table-controls">
+        <h3 style="margin:0;">🏥 Anagrafica HCO</h3>
+        <div style="display:flex; gap:10px;">
+          <input type="text" class="search-input" id="search_hco" placeholder="Cerca HCO..." oninput="renderAll()">
+          <button class="btn-export" onclick="exportToExcel('hco')">📥 Excel HCO</button>
+          <button id="btn_del_hco" class="btn-bulk-del" onclick="bulkDelete('hco')" style="display:none;">🗑️ ELIMINA SELEZ.</button>
+        </div>
+      </div>
+      
+      <div class="form-section">
+        <h4>➕ Nuova HCO</h4>
+        <form id="hcoForm" class="form-grid">
+          <div class="form-group"><label>P.IVA / CF *</label><input id="hco_cf" placeholder="12345678901" required></div>
+          <div class="form-group"><label>Ragione Sociale *</label><input id="hco_rs" placeholder="Denominazione" required></div>
+          <div class="form-group"><label>Comune</label><input id="hco_comune" placeholder="Comune"></div>
+          <div class="form-group"><label>Prov</label><input id="hco_prov" placeholder="MI" maxlength="2"></div>
+          <div class="form-group"><label>CAP</label><input id="hco_cap" placeholder="20100" maxlength="5"></div>
+          <div class="form-group"><label>Indirizzo</label><input id="hco_indirizzo" placeholder="Via, n°"></div>
+          <div class="form-group"><label>Tipo *</label><input id="hco_tipo" placeholder="Seleziona o digita..." list="hco_tipo_list"><datalist id="hco_tipo_list"></datalist></div>
+          <div class="form-group full-width" style="display: flex; justify-content: flex-end;"><button type="submit" class="btn-main">➕ AGGIUNGI HCO</button></div>
+        </form>
+      </div>
+      
+      <div class="grid-container"><table id="hcoTable"></table></div>
+    </section>
+
+    <!-- CATEGORIE -->
+    <section id="erogazioni" class="panel">
+      <div class="table-controls">
+        <h3 style="margin:0;">📋 Categorie Sunshine Act</h3>
+        <input type="text" class="search-input" id="search_erog" placeholder="Filtra categorie..." oninput="renderAll()">
+      </div>
+      
+      <div class="form-section">
+        <h4>➕ Nuova Categoria</h4>
+        <form id="erogForm" class="form-grid">
+          <div class="form-group"><label>Categoria Interna *</label><input id="erog_categoria_interna" placeholder="es. Consulenza" required></div>
+          <div class="form-group"><label>Natura *</label><input id="erog_natura" placeholder="Servizi e consulenze" required></div>
+          <div class="form-group"><label>Codice *</label><input id="erog_codice" placeholder="SC" maxlength="2" required></div>
+          <div class="form-group"><label>Note</label><input id="erog_note" placeholder="Descrizione"></div>
+          <div class="form-group"><label>Target *</label><select id="erog_target"><option value="HCP">HCP</option><option value="HCO">HCO</option></select></div>
+          <div class="form-group full-width" style="display: flex; justify-content: flex-end;"><button type="submit" class="btn-main btn-success">➕ AGGIUNGI</button></div>
+        </form>
+      </div>
+      
+      <div class="grid-container"><table id="erogTable"></table></div>
+    </section>
+
+    <!-- TOV -->
+    <section id="tov" class="panel">
+      <div class="table-controls">
+        <h3 style="margin:0;">💰 Registro Trasferimenti di Valore</h3>
+        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+          <div class="filter-bar"><span>📅</span><input type="date" id="filter_tov_da" oninput="renderAll()"><span>→</span><input type="date" id="filter_tov_a" oninput="renderAll()"><button onclick="resetTovDateFilter()" style="border:none; background:none; cursor:pointer; color:var(--danger); font-size:0.8rem;">✕</button></div>
+          <input type="text" class="search-input" id="search_tov" placeholder="Cerca TOV..." oninput="renderAll()">
+          <button class="btn-export" onclick="exportToExcel('tov')">📥 Excel TOV</button>
+          <button onclick="selectOnlyUnlocked('tov')" style="background:#95a5a6; color:white; border:none; padding:5px 12px; border-radius:30px; cursor:pointer; height:36px; font-size:0.75rem;">🔓 SOLO MODIFICABILI</button>
+          <button id="btn_del_tov" class="btn-bulk-del" onclick="bulkDelete('tov')" style="display:none;">🗑️ ELIMINA SELEZ.</button>
+        </div>
+      </div>
+      
+      <div class="form-section" style="background:#eef7ff;">
+        <h4>➕ Nuovo Trasferimento</h4>
+        <form id="tovForm" class="form-grid">
+          <div class="form-group"><label>Tipo *</label><select id="tov_tipo" onchange="onTipoChange()"><option value="HCP">HCP</option><option value="HCO">HCO</option></select></div>
+          <div class="form-group"><label>Cerca Destinatario *</label><input id="tov_destinatario_search" type="text" placeholder="Digita per cercare..." list="tov_soggetti_datalist" oninput="searchSoggetto()" autocomplete="off"><datalist id="tov_soggetti_datalist"></datalist></div>
+          <div class="form-group"><label>Codice Fiscale/P.IVA *</label><input id="tov_id_soggetto" type="text" placeholder="CF / P.IVA" readonly style="background:#f0f7ff; font-weight:600;"></div>
+          <div class="form-group"><label>Data *</label><input id="tov_data" type="date" required></div>
+          <div class="form-group"><label>Importo *</label><input id="tov_importo" type="number" step="0.01" placeholder="0,00" required oninput="calcIva()"></div>
+          <div class="form-group"><label>Valuta</label><input id="tov_valuta" value="EUR" readonly style="background:#f1f5f9;"></div>
+          <div class="form-group"><label>Categoria *</label><select id="tov_categoria" required></select></div>
+          <div class="form-group"><label>Modalità Pagamento *</label><input id="tov_modalita_pagamento" type="text" placeholder="Seleziona o digita..." list="modalita_list" autocomplete="off"><datalist id="modalita_list"><option value="CONTANTI">Contanti</option><option value="CARTA DI CREDITO">Carta di Credito</option><option value="BONIFICO">Bonifico</option><option value="ASSEGNO">Assegno</option></datalist></div>
+          <div class="form-group"><label>Sorgente *</label><input id="tov_sorgente" type="text" placeholder="Seleziona o digita..." list="sorgente_list" autocomplete="off"><datalist id="sorgente_list"><option value="SAP">SAP</option><option value="CONCUR">Concur</option><option value="AGENZIA">Agenzia</option></datalist></div>
+          <div class="form-group"><label>IVA Inclusa?</label><select id="tov_iva_inclusa" onchange="calcIva()"><option value="SI">✅ SI (scorporo)</option><option value="NO">❌ NO (aggiungi)</option></select></div>
+          <div class="form-group"><label>Aliquota IVA</label><select id="tov_aliquota" onchange="calcIva()"><option value="0.22">22%</option><option value="0.10">10%</option><option value="0.04">4%</option></select></div>
+          <div class="form-group"><label>Importo IVA</label><input id="tov_valore_iva" placeholder="0,00" readonly style="background:#f1f5f9;"></div>
+          <div class="form-group"><label>Imponibile</label><input id="tov_imponibile" placeholder="0,00" readonly style="background:#f1f5f9;"></div>
+          <div class="full-width"><div id="sogliaAlert" class="soglia-alert"></div></div>
+          <div class="form-group full-width" style="display: flex; justify-content: flex-end;"><button type="submit" class="btn-main" style="min-width: 220px;">💰 REGISTRA TRASFERIMENTO</button></div>
+        </form>
+      </div>
+      
+      <div class="grid-container"><table id="tovTable"></table></div>
+    </section>
+
+    <!-- IMPORTA/LOGS -->
+    <section id="import" class="panel">
+      <h3>📎 Importazione Dati</h3>
+      <div class="form-section">
+        <div class="import-grid">
+          <div class="form-group"><label>Destinazione</label><select id="import_target"><option value="hcp">HCP</option><option value="hco">HCO</option><option value="tov">TOV</option></select></div>
+          <div class="form-group"><label>File Excel</label><input type="file" id="excel_input" accept=".xlsx, .xls" style="height:42px; padding:10px;"></div>
+          <div class="form-group"><button onclick="importExcel()" class="btn-main btn-success" style="width:100%;">⬆️ ESEGUI IMPORT</button></div>
+        </div>
+      </div>
+      
+      <h3 style="margin: 25px 0 12px;">📋 Audit Log</h3>
+      <div class="filter-bar" style="margin-bottom: 16px;">
+        <span>📅 Filtra Log:</span><input type="date" id="log_da"><span>→</span><input type="date" id="log_a"><button onclick="showLogs()" class="btn-main small" style="background: var(--primary);">AGGIORNA</button>
+      </div>
+      
+      <div id="logDisplay"></div>
+    </section>
+
+    <!-- XML -->
+    <section id="xml" class="panel">
+      <h3>📄 Esportazione XML Sunshine Act</h3>
+      <div class="form-section" style="background:#f3e5f5;">
+        <div class="form-grid">
+          <div class="form-group"><label>Nome Azienda</label><input id="xml_soc_nome" placeholder="Serom Medical Technology s.r.l."></div>
+          <div class="form-group"><label>P.IVA</label><input id="xml_soc_piva" placeholder="12345678901"></div>
+          <div class="form-group"><label>Anno</label><input id="xml_anno" type="number" value="2026"></div>
+          <div class="form-group"><label>Semestre</label><select id="xml_semestre"><option value="1">1° Semestre (Gen-Giu)</option><option value="2">2° Semestre (Lug-Dic)</option></select></div>
+          <div class="form-group full-width" style="justify-self: end;"><button onclick="generateXML()" class="btn-main btn-purple" style="width:100%;">📄 GENERA XML E BLOCCA</button></div>
+        </div>
+      </div>
+      
+      <div class="xml-riepilogo">
+        <div class="xml-header" onclick="toggleXMLRiepilogo()" id="xmlHeader"><h5>📋 Riepilogo File XML Generati</h5><span class="toggle-icon" id="xmlToggleIcon">▶</span></div>
+        <div class="xml-content" id="xmlContent"><div style="max-height: 350px; overflow-y: auto;"><table class="xml-table"><thead><tr><th>Data Generazione</th><th>Periodo</th><th>N° Record</th><th>Nome File</th><th>Azioni</th></tr></thead><tbody id="xmlRiepilogoBody"></tbody></table></div></div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+  // ==================== CONFIGURAZIONE FIREBASE (fornita dall'utente) ====================
+  const firebaseConfig = {
+    apiKey: "AIzaSyDn7X6hvfTbUCdpEH0F6awPndys3iR42gQ",
+    authDomain: "serom-sunshine-act.firebaseapp.com",
+    projectId: "serom-sunshine-act",
+    storageBucket: "serom-sunshine-act.firebasestorage.app",
+    messagingSenderId: "607999172798",
+    appId: "1:607999172798:web:0a5efcb1d4a017494bbeef",
+    measurementId: "G-GHX2T7JGZ8"
+  };
+
+  // Inizializza Firebase
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+  const auth = firebase.auth();
+
+  // ==================== PASSWORD ACCESSO APP E MASTER ====================
+  const APP_ACCESS_PASSWORD = "sunshine2026";   // Cambia con la tua password
+  const MASTER_PASSWORD = "as608909";           // Password per operazioni riservate
+
+  // ==================== STATO GLOBALE ====================
+  let currentUser = null;
+  let editingId = null;
+  let soglieData = { hcp: [], hco: [] };
+
+  // ==================== OPZIONI PREDEFINITE (identiche) ====================
+  const OPTS = {
+    hcp: ["BIOLOGO / CHIMICO / FISICO", "FARMACISTA", "INFERMIERE / INFERMIERE PEDIATRICO", "MEDICO CHIRURGO", "ODONTOIATRA", "OSTETRICA/O", "PROFESSIONISTA DELLA RIABILITAZIONE", "PROFESSIONISTA SANITARIO DELLA PREVENZIONE", "PSICOLOGO", "STUDENTE / SPECIALIZZANDO", "TECNICO SANITARIO", "VETERINARIO"],
+    hco: ["STRUTTURA SANITARIA PUBBLICA", "STRUTTURA SANITARIA PRIVATA", "PROVIDER ECM", "UNIVERSITÀ / ENTE DI RICERCA", "SOCIETÀ SCIENTIFICA / ASSOCIAZIONE PROFESSIONALE", "ORDINE PROFESSIONALE", "FONDAZIONE / ONLUS"],
+    erog: [
+      {categoria_interna: "Consulenza", natura: "Servizi e consulenze", codice: "SC", note: "Fee/compensi per consulenze professionali", target: "HCO"},
+      {categoria_interna: "Advisory board", natura: "Servizi e consulenze", codice: "SC", note: "Partecipazione a advisory board (fee)", target: "HCO"},
+      {categoria_interna: "Sponsorizzazione evento", natura: "Sponsorizzazioni / contributi", codice: "SP", note: "Supporto economico per eventi/organizzazioni", target: "HCO"},
+      {categoria_interna: "Donazione", natura: "Donazioni e contributi", codice: "DO", note: "Donazioni in denaro o beni a HCO/enti", target: "HCO"},
+      {categoria_interna: "Contributo / Grant", natura: "Donazioni e contributi", codice: "DO", note: "Grant, borse, contributi istituzionali", target: "HCO"},
+      {categoria_interna: "Ricerca", natura: "Ricerca e sviluppo", codice: "RD", note: "Studi clinici, R&D, sperimentazioni", target: "HCO"},
+      {categoria_interna: "Relazione evento", natura: "Partecipazione a eventi", codice: "EV", note: "Speaker/relatore a congresso", target: "HCP"},
+      {categoria_interna: "Partecipazione evento", natura: "Partecipazione a eventi", codice: "EV", note: "Iscrizione/registrazione evento", target: "HCP"},
+      {categoria_interna: "Viaggio", natura: "Ospitalità e viaggi", codice: "OS", note: "Trasferte/voli/treni/auto", target: "HCP"},
+      {categoria_interna: "Ospitalità", natura: "Ospitalità e viaggi", codice: "OS", note: "Hotel/pasti/ospitalità consentita", target: "HCP"},
+      {categoria_interna: "Formazione", natura: "Formazione", codice: "FO", note: "Corsi, docenze, supporto formativo", target: "HCP"},
+      {categoria_interna: "Fornitura gratuita", natura: "Forniture / beni e servizi", codice: "FG", note: "Campioni, dispositivi a titolo gratuito", target: "HCP"},
+      {categoria_interna: "Sconto commerciale", natura: "Forniture / beni e servizi", codice: "FG", note: "Sconti/agevolazioni nel perimetro", target: "HCP"},
+      {categoria_interna: "Royalties", natura: "Interessi finanziari / Royalties", codice: "RY", note: "Royalties o diritti d'autore", target: "HCP"},
+      {categoria_interna: "Partecipazioni / strumenti finanziari", natura: "Interessi finanziari / partecipazioni", codice: "FI", note: "Azioni, obbligazioni, stock option", target: "HCP"},
+      {categoria_interna: "Altro", natura: "Altro trasferimento di valore", codice: "AL", note: "Usare solo se non classificabile", target: "HCP"}
+    ]
+  };
+
+  // ==================== FUNZIONI DI LOGIN/LOGOUT ====================
+  function checkLogin() {
+    const pwd = document.getElementById('login-password').value;
+    if (pwd === APP_ACCESS_PASSWORD) {
+      auth.signInAnonymously()
+        .then(() => {
+          document.getElementById('login-screen').classList.add('hidden');
+          setTimeout(() => {
+            document.getElementById('login-screen').style.display = 'none';
+            document.getElementById('app-main').style.display = 'block';
+            init();
+          }, 300);
+        })
+        .catch(error => {
+          console.error("Errore login Firebase:", error);
+          document.getElementById('login-error').innerText = "Errore di connessione a Firebase.";
+        });
+    } else {
+      document.getElementById('login-error').innerText = 'Password errata.';
+    }
+  }
+
+  function logout() {
+    auth.signOut().then(() => {
+      document.getElementById('app-main').style.display = 'none';
+      document.getElementById('login-screen').style.display = 'flex';
+      document.getElementById('login-screen').classList.remove('hidden');
+      document.getElementById('login-password').value = '';
+    });
+  }
+
+  // ==================== FUNZIONI DI UTILITÀ ====================
+  function formatDateIT(dateStr) {
+    if (!dateStr) return '';
+    if (typeof dateStr === 'string' && dateStr.includes('-')) {
+      const [y, m, d] = dateStr.split('T')[0].split('-');
+      return `${d}/${m}/${y}`;
+    }
+    return dateStr;
+  }
+
+  function formatCurrency(value) {
+    if (!value && value !== 0) return '';
+    const num = parseFloat(value);
+    if (isNaN(num)) return value;
+    return `€ ${num.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.')}`;
+  }
+
+  function formatNumber(value) {
+    if (!value && value !== 0) return '';
+    const num = parseFloat(value);
+    if (isNaN(num)) return value;
+    return num.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  }
+
+  // ==================== FUNZIONI PER LEGGERE/SCRIVERE SU FIRESTORE ====================
+  const collections = {
+    hcp: () => db.collection('hcp'),
+    hco: () => db.collection('hco'),
+    tov: () => db.collection('tov'),
+    erog: () => db.collection('erog'),
+    logs: () => db.collection('logs'),
+    xmlGenerati: () => db.collection('xmlGenerati')
+  };
+
+  async function getAll(collectionName) {
+    const snap = await collections[collectionName]().get();
+    return snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  }
+
+  async function getById(collectionName, id) {
+    const doc = await collections[collectionName]().doc(id).get();
+    return doc.exists ? { id: doc.id, ...doc.data() } : null;
+  }
+
+  async function add(collectionName, data) {
+    const docRef = await collections[collectionName]().add(data);
+    return docRef.id;
+  }
+
+  async function update(collectionName, id, data) {
+    await collections[collectionName]().doc(id).update(data);
+  }
+
+  async function del(collectionName, id) {
+    await collections[collectionName]().doc(id).delete();
+  }
+
+  async function bulkDelete(collectionName, ids) {
+    const batch = db.batch();
+    ids.forEach(id => {
+      batch.delete(collections[collectionName]().doc(id));
+    });
+    await batch.commit();
+  }
+
+  async function findTovByUniqueKey(cf, data, importo) {
+    const key = `${cf}_${data}_${importo}`;
+    const snap = await collections.tov().where('uniqueKey', '==', key).limit(1).get();
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }))[0];
+  }
+
+  async function findHcpByCf(cf) {
+    const snap = await collections.hcp().where('cf', '==', cf).limit(1).get();
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }))[0];
+  }
+
+  async function findHcoByCf(cf) {
+    const snap = await collections.hco().where('cf', '==', cf).limit(1).get();
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }))[0];
+  }
+
+  async function findErogByTarget(target) {
+    const snap = await collections.erog().where('target', '==', target).get();
+    return snap.docs.map(d => d.data());
+  }
+
+  // ==================== DASHBOARD ====================
+  async function updateDashboard() {
+    const annoSelezionato = document.getElementById('annoDashboard').value;
+    const tovs = await getAll('tov');
+    const hcpList = await getAll('hcp');
+    const hcoList = await getAll('hco');
+    
+    const tovsAnno = tovs.filter(t => {
+      if (!t.data) return false;
+      const anno = new Date(t.data).getFullYear().toString();
+      return anno === annoSelezionato;
+    });
+    
+    const totalImponibile = tovsAnno.reduce((sum, r) => sum + (parseFloat(r.imponibile) || 0), 0);
+    const pending = tovsAnno.filter(r => r.status === 'IN ATTESA').length;
+
+    document.getElementById('stat_tov_count').innerText = tovsAnno.length;
+    document.getElementById('stat_tov_sum').innerText = formatCurrency(totalImponibile);
+    document.getElementById('stat_ana_count').innerText = hcpList.length + hcoList.length;
+    document.getElementById('stat_pending').innerText = pending;
+    document.getElementById('annoSoglie').innerText = `(${annoSelezionato})`;
+    
+    await aggiornaRiepilogoInviati();
+  }
+
+  async function aggiornaRiepilogoInviati() {
+    const tovs = await getAll('tov');
+    const xmlList = await getAll('xmlGenerati');
+    const inviati = tovs.filter(t => t.status && t.status.includes('INVIATO'));
+    const hcpInviati = inviati.filter(t => t.tipo === 'HCP');
+    const hcoInviati = inviati.filter(t => t.tipo === 'HCO');
+    const totaleHCP = hcpInviati.reduce((sum, r) => sum + (parseFloat(r.imponibile) || 0), 0);
+    const totaleHCO = hcoInviati.reduce((sum, r) => sum + (parseFloat(r.imponibile) || 0), 0);
+    
+    const container = document.getElementById('riepilogoInviati');
+    container.innerHTML = `
+      <div class="inviato-card" style="background: white; padding: 12px; border-radius: 10px; border-left: 4px solid var(--purple);">
+        <h5 style="margin: 0 0 8px 0; font-size:0.85rem;">📤 Record Inviati (${inviati.length})</h5>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 4px; font-size:0.75rem;"><span style="color: #7f8c8d;">HCP:</span><span style="font-weight: 600;">${hcpInviati.length} (${formatCurrency(totaleHCP)})</span></div>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 4px; font-size:0.75rem;"><span style="color: #7f8c8d;">HCO:</span><span style="font-weight: 600;">${hcoInviati.length} (${formatCurrency(totaleHCO)})</span></div>
+        <div style="display: flex; justify-content: space-between; font-size:0.75rem;"><span style="color: #7f8c8d;">File XML:</span><span style="font-weight: 600;">${xmlList.length}</span></div>
+      </div>
+      <div class="inviato-card" style="background: white; padding: 12px; border-radius: 10px; border-left: 4px solid var(--warning);">
+        <h5 style="margin: 0 0 8px 0; font-size:0.85rem;">📊 Dettaglio Soglie Inviati</h5>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 4px; font-size:0.75rem;"><span style="color: #7f8c8d;">HCP > € 100:</span><span style="font-weight: 600;">${hcpInviati.filter(t => parseFloat(t.imponibile) > 100).length}</span></div>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 4px; font-size:0.75rem;"><span style="color: #7f8c8d;">HCO > € 1.000:</span><span style="font-weight: 600;">${hcoInviati.filter(t => parseFloat(t.imponibile) > 1000).length}</span></div>
+      </div>
+    `;
+  }
+
+  async function aggiornaDashboardPerAnno() {
+    await updateDashboard();
+    await verificaSoglie();
+    await caricaArchivioSemestri();
+  }
+
+  // ==================== ARCHIVIO TRASMISSIONI ====================
+  async function caricaArchivioSemestri() {
+    const anno = document.getElementById('archivioAnno').value;
+    const container = document.getElementById('archivioSemestriContainer');
+    const xmlList = await getAll('xmlGenerati');
+    const xmlAnno = xmlList.filter(x => x.anno === anno);
+    const semestre1 = xmlAnno.filter(x => x.semestre === '1');
+    const semestre2 = xmlAnno.filter(x => x.semestre === '2');
+    
+    document.getElementById('totaliAnno').innerHTML = `Totale: ${xmlAnno.length} file XML`;
+    
+    let html = '';
+    html += await creaBloccoSemestre(1, semestre1, anno);
+    html += await creaBloccoSemestre(2, semestre2, anno);
+    container.innerHTML = html;
+  }
+
+  async function creaBloccoSemestre(numero, xmlList, anno) {
+    if (xmlList.length === 0) {
+      return `<div class="xml-riepilogo" style="margin-bottom: 12px; opacity:0.6;"><div class="xml-header" style="cursor:default;"><h5>📂 ${numero}° Semestre ${anno}</h5><span style="font-size: 0.8rem; color: #95a5a6;">Nessun file XML</span></div></div>`;
+    }
+    
+    let totaleRecord = 0;
+    let totaleImporto = 0;
+    for (let xml of xmlList) {
+      const tovs = await collections.tov().where('xmlId', '==', xml.id).get();
+      totaleRecord += tovs.size;
+      tovs.forEach(d => {
+        totaleImporto += parseFloat(d.data().imponibile) || 0;
+      });
+    }
+    
+    return `
+      <div class="xml-riepilogo" style="margin-bottom: 12px;">
+        <div class="xml-header" onclick="toggleSemestre(${numero}, '${anno}')" id="headerSemestre${numero}">
+          <h5>📂 ${numero}° Semestre ${anno} <span class="semestre-badge">${xmlList.length} file</span></h5>
+          <div style="display: flex; align-items: center; gap: 15px;">
+            <span style="font-size: 0.8rem; color: var(--primary);">${totaleRecord} record - ${formatCurrency(totaleImporto)}</span>
+            <span class="toggle-icon" id="iconSemestre${numero}">▶</span>
+          </div>
+        </div>
+        <div class="xml-content" id="contentSemestre${numero}">
+          <div style="max-height: 350px; overflow-y: auto; padding: 8px;">
+            <table class="xml-table">
+              <thead><tr><th>Destinatario</th><th>Tipo</th><th>CF/P.IVA</th><th>Importo</th><th>Soglia</th><th>Data invio</th></tr></thead>
+              <tbody id="semestre${numero}Body"><tr><td colspan="6" style="text-align:center;">Caricamento...</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  async function toggleSemestre(numero, anno) {
+    const content = document.getElementById(`contentSemestre${numero}`);
+    const header = document.getElementById(`headerSemestre${numero}`);
+    const icon = document.getElementById(`iconSemestre${numero}`);
+    content.classList.toggle('expanded');
+    header.classList.toggle('expanded');
+    if (content.classList.contains('expanded')) {
+      icon.textContent = '▼';
+      await caricaDettaglioSemestre(numero, anno);
+    } else {
+      icon.textContent = '▶';
+    }
+  }
+
+  async function caricaDettaglioSemestre(numero, anno) {
+    const tbody = document.getElementById(`semestre${numero}Body`);
+    if (!tbody) return;
+    
+    const xmlList = await getAll('xmlGenerati');
+    const xmlAnno = xmlList.filter(x => x.anno === anno && x.semestre === numero.toString());
+    
+    const tuttiTov = [];
+    for (let xml of xmlAnno) {
+      const snap = await collections.tov().where('xmlId', '==', xml.id).get();
+      snap.forEach(d => tuttiTov.push({ id: d.id, ...d.data() }));
+    }
+    
+    if (tuttiTov.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Nessun record presente</td></tr>';
+      return;
+    }
+    
+    tuttiTov.sort((a, b) => new Date(b.data) - new Date(a.data));
+    tbody.innerHTML = tuttiTov.map(r => {
+      const superato = (r.tipo === 'HCP' && parseFloat(r.imponibile) > 100) || 
+                      (r.tipo === 'HCO' && parseFloat(r.imponibile) > 1000);
+      const rowClass = superato ? 'record-superato' : 'record-ok';
+      return `<tr class="${rowClass}"><td>${r.destinatario}</td><td>${r.tipo}</td><td>${r.cf}</td><td>${formatCurrency(r.imponibile)}</td><td>${superato ? '✓ Superata' : '—'}</td><td>${formatDateIT(r.data)}</td></tr>`;
+    }).join('');
+  }
+
+  // ==================== RENDERING TABELLE ====================
+  function renderInput(table, field, value) {
+    if (field === 'spec') {
+      return `<input type="text" id="edit_spec" value="${value || ''}" list="edit_spec_list" style="width:100%; height:30px; padding:0 8px; font-size:0.7rem;"><datalist id="edit_spec_list">${OPTS.hcp.map(o => `<option value="${o}">`).join('')}</datalist>`;
+    }
+    if (field === 'tipo') {
+      return `<input type="text" id="edit_tipo" value="${value || ''}" list="edit_tipo_list" style="width:100%; height:30px; padding:0 8px; font-size:0.7rem;"><datalist id="edit_tipo_list">${OPTS.hco.map(o => `<option value="${o}">`).join('')}</datalist>`;
+    }
+    if (table === 'tov' && field === 'categoria') {
+      const allCats = [...new Set(OPTS.erog.map(e => e.natura))];
+      return `<select id="edit_categoria" style="width:100%; height:30px; font-size:0.7rem;">${allCats.map(c => `<option ${c === value ? 'selected' : ''}>${c}</option>`).join('')}</select>`;
+    }
+    if (field === 'modalita_pagamento') {
+      return `<input type="text" id="edit_modalita_pagamento" value="${value || ''}" list="edit_modalita_list" style="width:100%; height:30px; padding:0 8px; font-size:0.7rem;"><datalist id="edit_modalita_list"><option value="CONTANTI"><option value="CARTA DI CREDITO"><option value="BONIFICO"><option value="ASSEGNO"></datalist>`;
+    }
+    if (field === 'sorgente') {
+      return `<input type="text" id="edit_sorgente" value="${value || ''}" list="edit_sorgente_list" style="width:100%; height:30px; padding:0 8px; font-size:0.7rem;"><datalist id="edit_sorgente_list"><option value="SAP"><option value="CONCUR"><option value="AGENZIA"></datalist>`;
+    }
+    if (field === 'data') {
+      let isoValue = '';
+      if (value) {
+        if (value.includes('/')) {
+          const parts = value.split('/');
+          isoValue = `${parts[2]}-${parts[1]}-${parts[0]}`;
+        } else {
+          isoValue = value.split(' ')[0];
+        }
+      }
+      return `<input type="date" id="edit_data" value="${isoValue}" style="width:100%; height:30px; font-size:0.7rem;">`;
+    }
+    if (field === 'iva_inclusa') {
+      return `<select id="edit_iva_inclusa" style="width:100%; height:30px; font-size:0.7rem;"><option value="SI" ${value === 'SI' ? 'selected' : ''}>SI (IVA inclusa)</option><option value="NO" ${value === 'NO' ? 'selected' : ''}>NO (IVA esclusa)</option></select>`;
+    }
+    return `<input type="text" id="edit_${field}" value="${value || ''}" style="width:100%; height:30px; padding:0 8px; font-size:0.7rem;">`;
+  }
+
+  async function renderAll() {
+    renderTable('hcpTable', await getAll('hcp'), 
+        ['cf','nome','cognome','indirizzo','comune','prov','cap','albo','num_iscr','spec'], 'hcp');
+    
+    renderTable('hcoTable', await getAll('hco'), 
+        ['cf','rs','comune','prov','cap','indirizzo','tipo'], 'hco');
+    
+    renderTable('erogTable', await getAll('erog'), 
+        ['categoria_interna', 'natura', 'codice', 'note', 'target'], 'erog');
+
+    let tovData = await getAll('tov');
+    const dDa = document.getElementById('filter_tov_da')?.value;
+    const dA = document.getElementById('filter_tov_a')?.value;
+    if (dDa || dA) {
+      tovData = tovData.filter(r => (!dDa || r.data >= dDa) && (!dA || r.data <= dA));
+    }
+    const tovFields = ['tipo', 'cf', 'destinatario', 'data', 'importo', 'valuta', 
+                       'categoria', 'modalita_pagamento', 'sorgente', 
+                       'iva_inclusa', 'aliquota', 'importo_iva', 'imponibile', 'status'];
+    renderTable('tovTable', tovData, tovFields, 'tov');
+    
+    await syncTovUI();
+    await updateDashboard();
+  }
+
+  function renderTable(id, data, fields, table) {
+    const t = document.getElementById(id);
+    if (!t) return;
+    
+    let filteredData = data;
+    if (table === 'tov') {
+      filteredData = data.filter(r => !r.status || !r.status.includes('INVIATO'));
+    }
+    
+    const search = (document.getElementById(`search_${table}`)?.value || "").toUpperCase();
+    const filtered = filteredData.filter(r => fields.some(f => (r[f]||'').toString().toUpperCase().includes(search)));
+
+    t.innerHTML = `<thead><tr>
+        <th style="width:28px;"><input type="checkbox" onclick="toggleSelectAll('${table}', this.checked)"></th>
+        ${fields.map(f => `<th>${f.replace(/_/g, ' ').toUpperCase()}</th>`).join('')}
+        <th style="width:65px;">AZIONI</th>
+    </tr></thead>
+    <tbody>${filtered.map(r => {
+      const isLocked = r.status && r.status.includes('INVIATO');
+      
+      if (editingId === `${table}_${r.id}`) {
+        return `<tr>
+            <td></td>
+            ${fields.map(f => `<td>${renderInput(table, f, r[f])}</td>`).join('')}
+            <td>
+                <button class="btn-action" onclick="saveRow('${table}','${r.id}')" title="Salva">💾</button>
+                <button class="btn-action" onclick="editingId=null; renderAll();" title="Annulla">✖️</button>
+            </td>
+        </tr>`;
+      }
+
+      return `<tr>
+        <td><input type="checkbox" class="chk-${table}" value="${r.id}" onchange="updateBulkBtn('${table}')"></td>
+        ${fields.map(f => {
+          const lock = (isLocked && fields.indexOf(f) === 0) ? '<span class="lock-icon" title="Record Bloccato">🔒</span>' : '';
+          let val = r[f] !== undefined && r[f] !== null ? r[f] : '';
+          
+          if (f === 'data') val = formatDateIT(val);
+          if (f === 'importo' || f === 'imponibile' || f === 'importo_iva') {
+            val = formatCurrency(val);
+          }
+          if (f === 'status') {
+            const statusClass = val.includes('INVIATO') ? 'inviato' : 'attesa';
+            val = `<span class="status-badge ${statusClass}">${val}</span>`;
+          }
+          
+          return `<td>${lock}${val}</td>`;
+        }).join('')}
+        <td>
+            <button class="btn-action" onclick="editRow('${table}','${r.id}')" title="Modifica">📝</button>
+            <button class="btn-action" onclick="delRec('${table}','${r.id}')" title="Elimina">🗑️</button>
+        </td>
+      </tr>`;
+    }).join('')}</tbody>`;
+  }
+
+  // ==================== GESTIONE RECORD ====================
+  window.editRow = (t, id) => { editingId = `${t}_${id}`; renderAll(); };
+
+  window.delRec = async (t, id) => {
+    const r = await getById(t, id);
+    if (r.status && r.status.includes('INVIATO')) {
+      const pass = prompt("🔒 RECORD BLOCCATO (Già inviato in XML).\nPer eliminare inserire password di sblocco:");
+      if (pass !== MASTER_PASSWORD) { alert("Password errata. Operazione annullata."); return; }
+    }
+    if(confirm("Sei sicuro di voler eliminare definitivamente questo record?")) {
+      await del(t, id);
+      await writeLog('DELETE', t, 'ALL', JSON.stringify(r), 'DELETED');
+      renderAll();
+    }
+  };
+
+  window.saveRow = async (t, id) => {
+    const recordEsistente = await getById(t, id);
+    if (recordEsistente.status && recordEsistente.status.includes('INVIATO')) {
+      const pass = prompt("🔒 RECORD BLOCCATO (Già inviato).\nPer modificare inserire password:");
+      if (pass !== MASTER_PASSWORD) { alert("Password errata. Modifica annullata."); editingId = null; renderAll(); return; }
+    }
+
+    const updates = {};
+    const inputs = document.querySelectorAll('[id^="edit_"]');
+    inputs.forEach(i => {
+      const field = i.id.replace('edit_', '');
+      if (['data', 'importo', 'imponibile', 'importo_iva', 'aliquota'].includes(field)) {
+        updates[field] = i.value;
+      } else {
+        updates[field] = i.value.toUpperCase().trim();
+      }
+    });
+
+    if (t === 'tov' && updates.importo) {
+      const imp = parseFloat(updates.importo) || 0;
+      const aliq = parseFloat(updates.aliquota) || 0.22;
+      const inc = updates.iva_inclusa === 'SI';
+      const iva = inc ? (imp / (1 + aliq)) * aliq : imp * aliq;
+      updates.importo_iva = iva.toFixed(2);
+      updates.imponibile = (inc ? imp - iva : imp).toFixed(2);
+      updates.uniqueKey = `${recordEsistente.cf}_${recordEsistente.data}_${recordEsistente.importo}`;
+    }
+
+    try {
+      await update(t, id, updates);
+      await writeLog('UPDATE', t, 'ALL_FIELDS', JSON.stringify(recordEsistente), JSON.stringify(updates));
+      editingId = null;
+      renderAll();
+    } catch (err) {
+      console.error("Errore salvataggio:", err);
+      alert("Errore nel salvataggio dei dati.");
+    }
+  };
+
+  // ==================== FUNZIONI TOV ====================
+  async function syncTovUI() {
+    const tipo = document.getElementById('tov_tipo').value;
+    const soggetti = tipo === 'HCP' ? await getAll('hcp') : await getAll('hco');
+    
+    const datalist = document.getElementById('tov_soggetti_datalist');
+    datalist.innerHTML = '';
+    
+    soggetti.forEach(s => {
+      const option = document.createElement('option');
+      if (tipo === 'HCP') {
+        option.value = `${s.cognome} ${s.nome}`;
+      } else {
+        option.value = s.rs;
+      }
+      option.setAttribute('data-cf', s.cf);
+      datalist.appendChild(option);
+    });
+
+    const cats = await findErogByTarget(tipo);
+    const categoriaSelect = document.getElementById('tov_categoria');
+    if (cats.length > 0) {
+      categoriaSelect.innerHTML = cats.map(c => 
+        `<option value="${c.categoria_interna}">${c.categoria_interna} (${c.codice})</option>`
+      ).join('');
+    } else {
+      categoriaSelect.innerHTML = '<option value="">Nessuna categoria disponibile</option>';
+    }
+  }
+
+  function searchSoggetto() {
+    const input = document.getElementById('tov_destinatario_search');
+    const cfField = document.getElementById('tov_id_soggetto');
+    const searchTerm = input.value;
+    if (!searchTerm) { cfField.value = ''; return; }
+    const options = document.querySelectorAll('#tov_soggetti_datalist option');
+    for (let opt of options) {
+      if (opt.value === searchTerm) {
+        const cf = opt.getAttribute('data-cf');
+        if (cf) cfField.value = cf;
+        break;
+      }
+    }
+  }
+
+  function onTipoChange() {
+    document.getElementById('tov_destinatario_search').value = '';
+    document.getElementById('tov_id_soggetto').value = '';
+    syncTovUI();
+  }
+
+  function calcIva() {
+    const imp = parseFloat(document.getElementById('tov_importo').value) || 0;
+    const aliq = parseFloat(document.getElementById('tov_aliquota').value);
+    const inc = document.getElementById('tov_iva_inclusa').value === 'SI';
+    const tipo = document.getElementById('tov_tipo').value;
+    
+    let imponibile, iva;
+    if (inc) {
+      imponibile = imp / (1 + aliq);
+      iva = imp - imponibile;
+    } else {
+      imponibile = imp;
+      iva = imp * aliq;
+    }
+    
+    document.getElementById('tov_valore_iva').value = imponibile.toFixed(2);
+    document.getElementById('tov_imponibile').value = iva.toFixed(2);
+    
+    const sogliaSingola = tipo === 'HCP' ? 100 : 1000;
+    const alertDiv = document.getElementById('sogliaAlert');
+    if (alertDiv) {
+      if (imponibile > sogliaSingola) {
+        alertDiv.className = 'soglia-alert danger';
+        alertDiv.innerHTML = `⚠️ Attenzione! Questo trasferimento (${formatCurrency(imponibile)}) supera la soglia di ${formatCurrency(sogliaSingola)} e DOVRÀ essere rendicontato.`;
+      } else {
+        alertDiv.className = 'soglia-alert';
+        alertDiv.innerHTML = '';
+      }
+    }
+  }
+
+  function resetTovDateFilter() {
+    document.getElementById('filter_tov_da').value = '';
+    document.getElementById('filter_tov_a').value = '';
+    renderAll();
+  }
+
+  // ==================== SOGLIE ====================
+  async function calcolaSoglieAnnuali() {
+    const annoSelezionato = document.getElementById('annoDashboard').value;
+    const tovs = await getAll('tov');
+    
+    const hcpData = {};
+    const hcoData = {};
+    
+    tovs.forEach(tov => {
+      const dataObj = new Date(tov.data);
+      const anno = dataObj.getFullYear().toString();
+      if (anno === annoSelezionato) {
+        const imponibile = parseFloat(tov.imponibile) || 0;
+        if (tov.tipo === 'HCP') {
+          if (!hcpData[tov.cf]) {
+            hcpData[tov.cf] = { cf: tov.cf, destinatario: tov.destinatario, totaleAnnuale: 0, trasferimenti: [] };
+          }
+          hcpData[tov.cf].totaleAnnuale += imponibile;
+          hcpData[tov.cf].trasferimenti.push(tov);
+        } else if (tov.tipo === 'HCO') {
+          if (!hcoData[tov.cf]) {
+            hcoData[tov.cf] = { cf: tov.cf, destinatario: tov.destinatario, totaleAnnuale: 0, trasferimenti: [] };
+          }
+          hcoData[tov.cf].totaleAnnuale += imponibile;
+          hcoData[tov.cf].trasferimenti.push(tov);
+        }
+      }
+    });
+    
+    return {
+      hcp: Object.values(hcpData).sort((a, b) => b.totaleAnnuale - a.totaleAnnuale),
+      hco: Object.values(hcoData).sort((a, b) => b.totaleAnnuale - a.totaleAnnuale)
+    };
+  }
+
+  function aggiornaTabelleSoglie(hcpData, hcoData) {
+    const hcpBody = document.getElementById('soglieHCPBody');
+    if (hcpData.length === 0) {
+      hcpBody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:10px;">Nessun trasferimento HCP per l\'anno selezionato</td></tr>';
+    } else {
+      hcpBody.innerHTML = hcpData.map(item => {
+        const superato = item.totaleAnnuale > 1000;
+        const badgeClass = superato ? 'badge-superato' : 'badge-non-superato';
+        const badgeText = superato ? 'SUPERATA' : 'SOTTO SOGLIA';
+        return `<tr><td>${item.destinatario}</td><td>${item.cf}</td><td>${formatCurrency(item.totaleAnnuale)}</td><td>€ 1.000,00</td><td><span class="${badgeClass}">${badgeText}</span></td></tr>`;
+      }).join('');
+    }
+    
+    const hcoBody = document.getElementById('soglieHCOBody');
+    if (hcoData.length === 0) {
+      hcoBody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:10px;">Nessun trasferimento HCO per l\'anno selezionato</td></tr>';
+    } else {
+      hcoBody.innerHTML = hcoData.map(item => {
+        const superato = item.totaleAnnuale > 2500;
+        const badgeClass = superato ? 'badge-superato' : 'badge-non-superato';
+        const badgeText = superato ? 'SUPERATA' : 'SOTTO SOGLIA';
+        return `<tr><td>${item.destinatario}</td><td>${item.cf}</td><td>${formatCurrency(item.totaleAnnuale)}</td><td>€ 2.500,00</td><td><span class="${badgeClass}">${badgeText}</span></td></tr>`;
+      }).join('');
+    }
+    
+    const alertList = [];
+    const sogliaSingolaHCP = 100;
+    const sogliaSingolaHCO = 1000;
+    
+    [...hcpData, ...hcoData].forEach(data => {
+      data.trasferimenti.forEach(t => {
+        const imponibile = parseFloat(t.imponibile) || 0;
+        const sogliaSingola = t.tipo === 'HCP' ? sogliaSingolaHCP : sogliaSingolaHCO;
+        if (imponibile > sogliaSingola) {
+          alertList.push({
+            tipo: t.tipo,
+            destinatario: t.destinatario,
+            cf: t.cf,
+            importo: imponibile,
+            data: t.data,
+            soglia: sogliaSingola
+          });
+        }
+      });
+    });
+    
+    const container = document.getElementById('soglieAlertContainer');
+    if (alertList.length > 0) {
+      let alertHtml = '<div class="soglia-singola-box"><h5 style="margin:0 0 6px 0; font-size:0.8rem;">🔴 Superamenti Soglie Singole</h5>';
+      alertList.slice(0, 8).forEach(a => {
+        alertHtml += `<div class="soglia-item">${a.destinatario} (${a.tipo}): ${formatDateIT(a.data)} - ${formatCurrency(a.importo)} > ${formatCurrency(a.soglia)}</div>`;
+      });
+      if (alertList.length > 8) {
+        alertHtml += `<div class="soglia-item" style="font-style:italic;">... e altri ${alertList.length - 8} superamenti</div>`;
+      }
+      alertHtml += '</div>';
+      container.innerHTML = alertHtml;
+    } else {
+      container.innerHTML = '<div class="soglia-annuale-box" style="background:#d4edda; color:#155724; padding:8px;">✅ Nessun superamento di soglia singola nell\'anno selezionato</div>';
+    }
+  }
+
+  async function verificaSoglie() {
+    const data = await calcolaSoglieAnnuali();
+    soglieData = data;
+    aggiornaTabelleSoglie(data.hcp, data.hco);
+    
+    let alertCount = 0;
+    data.hcp.forEach(h => {
+      if (h.totaleAnnuale > 1000) alertCount++;
+      h.trasferimenti.forEach(t => { if (parseFloat(t.imponibile) > 100) alertCount++; });
+    });
+    data.hco.forEach(h => {
+      if (h.totaleAnnuale > 2500) alertCount++;
+      h.trasferimenti.forEach(t => { if (parseFloat(t.imponibile) > 1000) alertCount++; });
+    });
+    
+    aggiornaBadgeTov(alertCount);
+    await writeLog('VERIFICA_SOGLIE', 'DASHBOARD', 'ALL', `Verificato anno ${document.getElementById('annoDashboard').value}`, 'VERIFICATO');
+  }
+
+  async function esportaReportSoglie() {
+    const annoSelezionato = document.getElementById('annoDashboard').value;
+    const data = await calcolaSoglieAnnuali();
+    
+    const reportHCP = data.hcp.map(h => ({
+      Tipo: 'HCP', Destinatario: h.destinatario, CF: h.cf,
+      'Totale Annuale': formatNumber(h.totaleAnnuale), Soglia: '1.000,00',
+      Superata: h.totaleAnnuale > 1000 ? 'SI' : 'NO',
+      'N° Trasferimenti': h.trasferimenti.length
+    }));
+    
+    const reportHCO = data.hco.map(h => ({
+      Tipo: 'HCO', Destinatario: h.destinatario, 'P.IVA/CF': h.cf,
+      'Totale Annuale': formatNumber(h.totaleAnnuale), Soglia: '2.500,00',
+      Superata: h.totaleAnnuale > 2500 ? 'SI' : 'NO',
+      'N° Trasferimenti': h.trasferimenti.length
+    }));
+    
+    const dettaglio = [];
+    [...data.hcp, ...data.hco].forEach(beneficiario => {
+      beneficiario.trasferimenti.forEach(t => {
+        dettaglio.push({
+          Tipo: t.tipo, Destinatario: t.destinatario, CF: t.cf,
+          Data: formatDateIT(t.data), Importo: formatNumber(t.importo),
+          Imponibile: formatNumber(t.imponibile), Categoria: t.categoria,
+          'Modalità Pagamento': t.modalita_pagamento, Sorgente: t.sorgente,
+          Status: t.status || 'IN ATTESA'
+        });
+      });
+    });
+    
+    const wb = XLSX.utils.book_new();
+    if (reportHCP.length > 0) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(reportHCP), 'Riepilogo_HCP');
+    if (reportHCO.length > 0) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(reportHCO), 'Riepilogo_HCO');
+    if (dettaglio.length > 0) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(dettaglio), 'Dettaglio_Trasferimenti');
+    XLSX.writeFile(wb, `Report_Soglie_${annoSelezionato}_${new Date().toISOString().split('T')[0]}.xlsx`);
+    await writeLog('ESPORTA_REPORT_SOGLIE', 'DASHBOARD', 'ALL', `Esportato report anno ${annoSelezionato}`, 'ESPORTAZIONE');
+  }
+
+  function mostraTabSoglie(tipo) {
+    document.querySelectorAll('.soglia-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.soglia-content').forEach(c => c.classList.remove('active'));
+    if (tipo === 'hcp') {
+      document.querySelectorAll('.soglia-tab')[0].classList.add('active');
+      document.getElementById('soglieHCP').classList.add('active');
+    } else {
+      document.querySelectorAll('.soglia-tab')[1].classList.add('active');
+      document.getElementById('soglieHCO').classList.add('active');
+    }
+  }
+
+  function aggiornaBadgeTov(numeroAlert) {
+    const tovTab = document.getElementById('tovTab');
+    const existingBadge = tovTab.querySelector('.notification-badge');
+    if (existingBadge) existingBadge.remove();
+    if (numeroAlert > 0) {
+      const badge = document.createElement('span');
+      badge.className = 'notification-badge';
+      badge.textContent = numeroAlert > 9 ? '9+' : numeroAlert;
+      tovTab.appendChild(badge);
+    }
+  }
+
+  // ==================== FUNZIONI PER XML GENERATI ====================
+  async function salvaXMLGenerato(periodo, anno, semestre, numRecord, nomeFile) {
+    const id = await add('xmlGenerati', {
+      dataGenerazione: new Date().toISOString(),
+      periodo,
+      anno,
+      semestre,
+      numRecord,
+      nomeFile
+    });
+    return id;
+  }
+
+  async function mostraRiepilogoXML() {
+    const xmlList = await getAll('xmlGenerati');
+    xmlList.sort((a, b) => b.dataGenerazione.localeCompare(a.dataGenerazione));
+    const container = document.getElementById('xmlRiepilogoBody');
+    if (xmlList.length === 0) {
+      container.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:10px;">Nessun file XML generato</td></tr>';
+      return;
+    }
+    container.innerHTML = xmlList.map(x => {
+      const data = new Date(x.dataGenerazione);
+      const dataFormatted = data.toLocaleDateString('it-IT') + ' ' + data.toLocaleTimeString('it-IT');
+      return `<tr>
+        <td>${dataFormatted}</td>
+        <td>${x.periodo}</td>
+        <td>${x.numRecord}</td>
+        <td>${x.nomeFile}</td>
+        <td>
+          <button class="btn-action" onclick="visualizzaDettaglioXML('${x.id}')" title="Visualizza dettaglio">👁️</button>
+          <button class="btn-action" onclick="cancellaXML('${x.id}')" title="Cancella XML e ripristina record">🗑️</button>
+        </td>
+      </tr>`;
+    }).join('');
+  }
+
+  async function visualizzaDettaglioXML(xmlId) {
+    const xml = await getById('xmlGenerati', xmlId);
+    if (!xml) return;
+    const tovs = await collections.tov().where('xmlId', '==', xmlId).get();
+    let dettaglio = `📄 Dettaglio XML ${xml.nomeFile}\nPeriodo: ${xml.periodo}\nData generazione: ${new Date(xml.dataGenerazione).toLocaleString()}\nN° record: ${xml.numRecord}\n\nRecord inclusi:\n`;
+    tovs.forEach(doc => {
+      const r = doc.data();
+      dettaglio += `- ${r.destinatario} (${r.cf}): ${formatCurrency(r.imponibile)} del ${formatDateIT(r.data)}\n`;
+    });
+    alert(dettaglio);
+  }
+
+  async function cancellaXML(xmlId) {
+    const pass = prompt("🔒 Operazione riservata.\nInserire password per cancellare l'XML e ripristinare i record:");
+    if (pass !== MASTER_PASSWORD) { alert("Password errata. Operazione annullata."); return; }
+    
+    const xml = await getById('xmlGenerati', xmlId);
+    if (!xml) return;
+    if (!confirm(`Sei sicuro di voler cancellare l'XML "${xml.nomeFile}" e ripristinare tutti i record?`)) return;
+    
+    try {
+      const tovs = await collections.tov().where('xmlId', '==', xmlId).get();
+      const batch = db.batch();
+      tovs.forEach(doc => {
+        batch.update(doc.ref, { status: 'IN ATTESA', xmlId: null });
+      });
+      batch.delete(collections.xmlGenerati().doc(xmlId));
+      await batch.commit();
+      
+      await writeLog('DELETE_XML', 'XML', 'ALL', xml.nomeFile, 'CANCELLATO');
+      alert(`✅ XML cancellato e ${tovs.size} record ripristinati.`);
+      await mostraRiepilogoXML();
+      await renderAll();
+      await verificaSoglie();
+      await aggiornaRiepilogoInviati();
+      await caricaArchivioSemestri();
+    } catch (err) {
+      console.error("Errore cancellazione XML:", err);
+      alert("❌ Errore durante la cancellazione dell'XML.");
+    }
+  }
+
+  function toggleXMLRiepilogo() {
+    const content = document.getElementById('xmlContent');
+    const header = document.getElementById('xmlHeader');
+    const icon = document.getElementById('xmlToggleIcon');
+    content.classList.toggle('expanded');
+    header.classList.toggle('expanded');
+    icon.textContent = content.classList.contains('expanded') ? '▼' : '▶';
+  }
+
+  // ==================== SELEZIONE ED ELIMINAZIONE MASSIVA ====================
+  function toggleSelectAll(t, c) {
+    document.querySelectorAll(`.chk-${t}`).forEach(x => x.checked = c);
+    updateBulkBtn(t);
+  }
+  function updateBulkBtn(t) {
+    const s = document.querySelectorAll(`.chk-${t}:checked`).length;
+    const btn = document.getElementById(`btn_del_${t}`);
+    if(btn) btn.style.display = s > 0 ? 'inline-block' : 'none';
+  }
+  async function selectOnlyUnlocked(table) {
+    document.querySelectorAll(`.chk-${table}`).forEach(x => x.checked = false);
+    const data = await getAll(table);
+    const unlockedIds = data.filter(r => !r.status || !r.status.includes('INVIATO')).map(r => r.id);
+    document.querySelectorAll(`.chk-${table}`).forEach(cb => {
+      if (unlockedIds.includes(cb.value)) cb.checked = true;
+    });
+    updateBulkBtn(table);
+  }
+  async function bulkDelete(table) {
+    const checkboxes = document.querySelectorAll(`.chk-${table}:checked`);
+    const ids = Array.from(checkboxes).map(cb => cb.value);
+    if (ids.length === 0) return;
+    
+    const records = [];
+    for (let id of ids) {
+      records.push(await getById(table, id));
+    }
+    const blocked = records.filter(r => r.status && r.status.includes('INVIATO'));
+    const deletable = records.filter(r => !r.status || !r.status.includes('INVIATO'));
+    
+    let message = `Stai per eliminare ${deletable.length} record dalla tabella ${table.toUpperCase()}.`;
+    if (blocked.length > 0) {
+      message += `\n\nAttenzione: ${blocked.length} record sono BLOCCATI (già inviati) e NON verranno eliminati.`;
+    }
+    if (deletable.length === 0) {
+      alert("Operazione annullata: tutti i record selezionati sono bloccati.");
+      return;
+    }
+    if (confirm(message + "\n\nSei sicuro di voler procedere?")) {
+      try {
+        const idsToDelete = deletable.map(r => r.id);
+        await bulkDelete(table, idsToDelete);
+        await writeLog('BULK_DELETE', table, 'ID_LIST', idsToDelete.join(','), 'DELETED');
+        alert(`✅ Eliminazione completata: ${idsToDelete.length} record rimossi.`);
+        renderAll();
+      } catch (err) {
+        console.error("Errore eliminazione massiva:", err);
+        alert("Si è verificato un errore durante l'eliminazione.");
+      }
+    }
+  }
+
+  // ==================== EXPORT/IMPORT ====================
+  async function exportToExcel(table) {
+    const data = await getAll(table);
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, table.toUpperCase());
+    XLSX.writeFile(wb, `Serom_${table}_Export.xlsx`);
+  }
+
+  async function exportFullBackup() {
+    const wb = XLSX.utils.book_new();
+    for (let t of ['hcp', 'hco', 'tov', 'erog', 'logs', 'xmlGenerati']) {
+      const data = await getAll(t);
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data), t.toUpperCase());
+    }
+    XLSX.writeFile(wb, `BACKUP_SEROM_COMPLETO_${new Date().toISOString().split('T')[0]}.xlsx`);
+  }
+
+  async function downloadTemplateExcel() {
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([["cf", "nome", "cognome", "indirizzo", "comune", "prov", "cap", "albo", "num_iscr", "spec"]]), "IMPORT_HCP");
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([["cf", "rs", "comune", "prov", "cap", "indirizzo", "tipo"]]), "IMPORT_HCO");
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([["tipo", "cf", "destinatario", "data", "importo", "valuta", "categoria", "modalita_pagamento", "sorgente", "iva_inclusa", "aliquota"]]), "IMPORT_TOV");
+    XLSX.writeFile(wb, "Modello_Caricamento_Sunshine.xlsx");
+  }
+
+  async function importExcel() {
+    const file = document.getElementById('excel_input').files[0];
+    const target = document.getElementById('import_target').value;
+    if (!file) return alert("Seleziona un file!");
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const sheetName = workbook.SheetNames[0];
+        const sheet = workbook.Sheets[sheetName];
+        const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+        if (jsonData.length < 2) { alert("Il file Excel sembra vuoto. Verifica che contenga dati."); return; }
+        const headers = jsonData[0].map(h => { if (!h) return ''; return h.toString().toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, ''); });
+        const rows = jsonData.slice(1);
+        let successCount = 0; let errorCount = 0; let errorMessages = [];
+
+        for (let rowIndex = 0; rowIndex < rows.length; rowIndex++) {
+          const row = rows[rowIndex];
+          if (!row || row.length === 0 || row.every(cell => cell === undefined || cell === null || cell === '')) continue;
+          let rec = {};
+          if (target === 'hcp') {
+            headers.forEach((header, colIndex) => {
+              if (!header || row[colIndex] === undefined || row[colIndex] === null || row[colIndex] === '') return;
+              let value = row[colIndex].toString().trim().toUpperCase();
+              if (header === 'cf') rec.cf = value;
+              else if (header === 'nome') rec.nome = value;
+              else if (header === 'cognome') rec.cognome = value;
+              else if (header === 'indirizzo') rec.indirizzo = value;
+              else if (header === 'comune') rec.comune = value;
+              else if (header === 'prov') rec.prov = value;
+              else if (header === 'cap') rec.cap = value;
+              else if (header === 'albo') rec.albo = value;
+              else if (header === 'numiscr' || header === 'num_iscr') rec.num_iscr = value;
+              else if (header === 'spec') rec.spec = value;
+            });
+            if (!rec.cf) { errorCount++; errorMessages.push(`Riga ${rowIndex + 2}: CF mancante per HCP`); continue; }
+          } else if (target === 'hco') {
+            headers.forEach((header, colIndex) => {
+              if (!header || row[colIndex] === undefined || row[colIndex] === null || row[colIndex] === '') return;
+              let value = row[colIndex].toString().trim().toUpperCase();
+              if (header === 'cf') rec.cf = value;
+              else if (header === 'rs' || header === 'ragionesociale') rec.rs = value;
+              else if (header === 'comune') rec.comune = value;
+              else if (header === 'prov') rec.prov = value;
+              else if (header === 'cap') rec.cap = value;
+              else if (header === 'indirizzo') rec.indirizzo = value;
+              else if (header === 'tipo') rec.tipo = value;
+            });
+            if (!rec.cf) { errorCount++; errorMessages.push(`Riga ${rowIndex + 2}: CF/P.IVA mancante per HCO`); continue; }
+          } else if (target === 'tov') {
+            headers.forEach((header, colIndex) => {
+              if (!header || row[colIndex] === undefined || row[colIndex] === null || row[colIndex] === '') return;
+              let value = row[colIndex];
+              if (header === 'tipo') rec.tipo = value.toString().toUpperCase().trim();
+              else if (header === 'cf') rec.cf = value.toString().toUpperCase().trim();
+              else if (header === 'destinatario') rec.destinatario = value.toString().toUpperCase().trim();
+              else if (header === 'data') {
+                if (value instanceof Date) { rec.data = value.toISOString().split('T')[0]; }
+                else if (typeof value === 'number') { try { const date = new Date((value - 25569) * 86400 * 1000); rec.data = date.toISOString().split('T')[0]; } catch { rec.data = new Date().toISOString().split('T')[0]; } }
+                else { const dateStr = value.toString().trim(); if (dateStr.includes(' ')) { rec.data = dateStr.split(' ')[0]; } else if (dateStr.includes('/')) { const parts = dateStr.split('/'); if (parts.length === 3) { rec.data = `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`; } else { rec.data = dateStr; } } else { rec.data = dateStr; } }
+              }
+              else if (header === 'importo') { if (typeof value === 'string') { rec.importo = parseFloat(value.replace(',', '.')) || 0; } else { rec.importo = parseFloat(value) || 0; } }
+              else if (header === 'valuta') rec.valuta = value.toString().toUpperCase().trim();
+              else if (header === 'categoria') rec.categoria = value.toString().toUpperCase().trim();
+              else if (header === 'modalitapagamento' || header === 'modalita_pagamento') {
+                let modalita = value.toString().toUpperCase().trim();
+                if (modalita.includes('CONTANT')) modalita = 'CONTANTI';
+                else if (modalita.includes('CARTA')) modalita = 'CARTA DI CREDITO';
+                else if (modalita.includes('BONIF')) modalita = 'BONIFICO';
+                else if (modalita.includes('ASSEG')) modalita = 'ASSEGNO';
+                rec.modalita_pagamento = modalita;
+              }
+              else if (header === 'sorgente') {
+                let sorgente = value.toString().toUpperCase().trim();
+                if (sorgente.includes('SAP')) sorgente = 'SAP';
+                else if (sorgente.includes('CONC')) sorgente = 'CONCUR';
+                else if (sorgente.includes('AGEN')) sorgente = 'AGENZIA';
+                rec.sorgente = sorgente;
+              }
+              else if (header === 'ivainclusa' || header === 'iva_inclusa') { rec.iva_inclusa = value.toString().toUpperCase().includes('SI') ? 'SI' : 'NO'; }
+              else if (header === 'aliquota') {
+                if (typeof value === 'string') { let val = value.toString().replace('%', '').replace(',', '.'); rec.aliquota = parseFloat(val) / (val.includes('%') ? 100 : 1) || 0.22; }
+                else { rec.aliquota = parseFloat(value) || 0.22; }
+              }
+              else if (header === 'importoiva' || header === 'importo_iva') { if (typeof value === 'string') { rec.importo_iva = parseFloat(value.replace(',', '.')) || 0; } else { rec.importo_iva = parseFloat(value) || 0; } }
+              else if (header === 'imponibile') { if (typeof value === 'string') { rec.imponibile = parseFloat(value.replace(',', '.')) || 0; } else { rec.imponibile = parseFloat(value) || 0; } }
+            });
+            if (!rec.cf) { errorCount++; errorMessages.push(`Riga ${rowIndex + 2}: CF mancante per TOV`); continue; }
+            if (!rec.data) { errorCount++; errorMessages.push(`Riga ${rowIndex + 2}: Data mancante per CF ${rec.cf}`); continue; }
+            if (!rec.importo || rec.importo === 0) { errorCount++; errorMessages.push(`Riga ${rowIndex + 2}: Importo mancante o zero per CF ${rec.cf}`); continue; }
+            if ((!rec.imponibile || rec.imponibile === 0) || (!rec.importo_iva || rec.importo_iva === 0)) {
+              const imp = rec.importo || 0; const aliq = rec.aliquota || 0.22; const inc = rec.iva_inclusa !== 'NO';
+              let imponibile, iva;
+              if (inc) { imponibile = imp / (1 + aliq); iva = imp - imponibile; } else { imponibile = imp; iva = imp * aliq; }
+              rec.importo_iva = parseFloat(iva.toFixed(2)); rec.imponibile = parseFloat(imponibile.toFixed(2));
+            }
+            if (!rec.tipo) rec.tipo = 'HCP'; if (!rec.valuta) rec.valuta = 'EUR'; if (!rec.modalita_pagamento) rec.modalita_pagamento = 'BONIFICO'; if (!rec.sorgente) rec.sorgente = 'CONCUR'; if (!rec.iva_inclusa) rec.iva_inclusa = 'SI'; if (!rec.aliquota) rec.aliquota = 0.22;
+            rec.uniqueKey = `${rec.cf}_${rec.data}_${rec.importo}`;
+          }
+
+          rec.status = 'IN ATTESA';
+
+          try {
+            if (target === 'tov') {
+              const existing = await findTovByUniqueKey(rec.cf, rec.data, rec.importo);
+              if (existing) { await update('tov', existing.id, rec); await writeLog('IMPORT_UPDATE', 'tov', 'ALL', `ID:${existing.id}`, JSON.stringify(rec)); }
+              else { await add('tov', rec); await writeLog('IMPORT_ADD', 'tov', 'ALL', 'NEW_RECORD', JSON.stringify(rec)); }
+            } else {
+              const existing = await (target === 'hcp' ? findHcpByCf(rec.cf) : findHcoByCf(rec.cf));
+              if (existing) { await update(target, existing.id, rec); await writeLog('IMPORT_UPDATE', target, 'ALL', `ID:${existing.id}`, JSON.stringify(rec)); }
+              else { await add(target, rec); await writeLog('IMPORT_ADD', target, 'ALL', 'NEW_RECORD', JSON.stringify(rec)); }
+            }
+            successCount++;
+          } catch (dbError) { errorCount++; errorMessages.push(`Riga ${rowIndex + 2}: Errore DB - ${dbError.message}`); }
+        }
+
+        let message = `✅ Importazione ${target.toUpperCase()} completata!\n📊 Record importati/aggiornati: ${successCount}\n`;
+        if (errorCount > 0) { message += `❌ Errori: ${errorCount}\n\nPrimi errori:\n${errorMessages.slice(0, 5).join('\n')}`; } else { message += `\n✨ Tutti i record sono stati importati con successo!`; }
+        alert(message); await renderAll();
+      } catch (err) { console.error("Errore durante l'importazione:", err); alert("❌ Errore durante l'importazione: " + err.message); }
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
+  // ==================== LOGS ====================
+  async function writeLog(azione, tabella, campo, prima, dopo) {
+    await add('logs', {
+      timestamp: new Date().toLocaleString(),
+      utente: "ADMIN",
+      azione,
+      tabella,
+      campo,
+      valore_prima: prima || '--',
+      valore_dopo: dopo || '--'
+    });
+  }
+
+  async function showLogs() {
+    let logs = await getAll('logs');
+    logs.sort((a, b) => b.id.localeCompare(a.id));
+    const da = document.getElementById('log_da').value;
+    const a = document.getElementById('log_a').value;
+    if (da || a) {
+      logs = logs.filter(l => {
+        const [dateStr] = l.timestamp.split(' ');
+        const [d, m, y] = dateStr.split('/');
+        const logDate = `${y}-${m}-${d}`;
+        return (!da || logDate >= da) && (!a || logDate <= a);
+      });
+    }
+    const container = document.getElementById('logDisplay');
+    if(container) {
+      container.innerHTML = logs.length ? logs.map(l => `
+        <div>
+          <span style="color:#94a3b8;">[${l.timestamp}]</span> 
+          <span style="color:#f472b6;">${l.azione}</span> 
+          su <span style="color:#a78bfa;">${l.tabella}</span>: 
+          <span style="color:#fbbf24;">${l.valore_prima}</span> → 
+          <span style="color:#4ade80;">${l.valore_dopo}</span>
+        </div>`).join('') : '<div style="color:#94a3b8; text-align:center;">Nessun log trovato</div>';
+    }
+  }
+
+  // ==================== GENERAZIONE XML ====================
+  async function generateXML() {
+    const soc = document.getElementById('xml_soc_nome').value.trim() || "Serom Medical Technology s.r.l.";
+    const cfSoc = document.getElementById('xml_soc_piva').value.trim() || "12345678901";
+    const annoSelezionato = document.getElementById('xml_anno').value;
+    const semSelezionato = document.getElementById('xml_semestre').value;
+
+    const tuttiITov = await getAll('tov');
+    const filtered = tuttiITov.filter(t => {
+      if (!t.data) return false;
+      const d = new Date(t.data);
+      const annoRecord = d.getFullYear().toString();
+      const meseRecord = d.getMonth(); 
+      const matchesAnno = (annoRecord === annoSelezionato);
+      const matchesSemestre = (semSelezionato === "1") ? (meseRecord <= 5) : (meseRecord >= 6);
+      return matchesAnno && matchesSemestre && (!t.status || !t.status.includes('INVIATO'));
+    });
+
+    if (filtered.length === 0) {
+      alert(`Nessun trasferimento non ancora inviato trovato per l'anno ${annoSelezionato} e il ${semSelezionato}° semestre.`);
+      return;
+    }
+
+    if (!confirm(`Generare XML per ${filtered.length} record e BLOCCARLI?`)) return;
+
+    try {
+      const periodo = `${annoSelezionato} S${semSelezionato}`;
+      const xmlId = await salvaXMLGenerato(periodo, annoSelezionato, semSelezionato, filtered.length, `Sunshine_${cfSoc}_${annoSelezionato}_S${semSelezionato}.xml`);
+
+      let xml = `<?xml version="1.0" encoding="UTF-8"?>\n<SunshineReport>\n`;
+      xml += `  <Header>\n    <Azienda>${soc}</Azienda>\n    <PIVA>${cfSoc}</PIVA>\n    <Periodo>${periodo}</Periodo>\n  </Header>\n  <Data>\n`;
+      
+      const batch = db.batch();
+      for (let r of filtered) {
+        xml += `    <Trasferimento>\n      <Soggetto>${r.cf}</Soggetto>\n      <Importo>${r.imponibile}</Importo>\n      <Data>${r.data}</Data>\n      <Categoria>${r.categoria}</Categoria>\n    </Trasferimento>\n`;
+        const ref = collections.tov().doc(r.id);
+        batch.update(ref, { status: `INVIATO XML ${new Date().toLocaleDateString()}`, xmlId });
+      }
+      await batch.commit();
+      
+      xml += `  </Data>\n</SunshineReport>`;
+
+      const nomeFile = `Sunshine_${cfSoc}_${annoSelezionato}_S${semSelezionato}.xml`;
+      const blob = new Blob([xml], { type: 'text/xml' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = nomeFile;
+      link.click();
+
+      await mostraRiepilogoXML();
+      await caricaArchivioSemestri();
+
+      alert("✅ XML Esportato con successo e record bloccati!");
+      renderAll();
+    } catch (err) {
+      alert("❌ Errore durante la generazione XML: " + err.message);
+    }
+  }
+
+  // ==================== FORM ====================
+  document.getElementById('hcpForm').onsubmit = async (e) => {
+    e.preventDefault();
+    const obj = {};
+    e.target.querySelectorAll('input').forEach(i => {
+      if(i.id) obj[i.id.replace('hcp_', '')] = i.value.toUpperCase().trim();
+    });
+    try {
+      await add('hcp', obj);
+      await writeLog('INSERT', 'HCP', 'ALL', 'NEW_RECORD', JSON.stringify(obj));
+      e.target.reset();
+      renderAll();
+    } catch(err) { 
+      alert("❌ Errore: Codice Fiscale già esistente."); 
+    }
+  };
+
+  document.getElementById('hcoForm').onsubmit = async (e) => {
+    e.preventDefault();
+    const obj = {};
+    e.target.querySelectorAll('input').forEach(i => {
+      if(i.id) obj[i.id.replace('hco_', '')] = i.value.toUpperCase().trim();
+    });
+    try {
+      await add('hco', obj);
+      await writeLog('INSERT', 'HCO', 'ALL', 'NEW_RECORD', JSON.stringify(obj));
+      e.target.reset();
+      renderAll();
+    } catch(err) { 
+      alert("❌ Errore: P.IVA/CF già esistente."); 
+    }
+  };
+
+  document.getElementById('erogForm').onsubmit = async (e) => {
+    e.preventDefault();
+    const obj = {}; 
+    e.target.querySelectorAll('input, select').forEach(i => {
+      if(i.id) obj[i.id.replace('erog_', '')] = i.value.toUpperCase().trim();
+    });
+    await add('erog', obj);
+    await writeLog('INSERT', 'EROGAZIONI', 'ALL', 'NEW_RECORD', JSON.stringify(obj));
+    renderAll(); 
+    e.target.reset();
+  };
+
+  document.getElementById('tovForm').onsubmit = async (e) => {
+    e.preventDefault();
+    
+    const searchInput = document.getElementById('tov_destinatario_search');
+    const options = document.querySelectorAll('#tov_soggetti_datalist option');
+    let destinatario = searchInput.value;
+    for (let opt of options) {
+      if (opt.value === destinatario) {
+        destinatario = opt.value;
+        break;
+      }
+    }
+    
+    const obj = {
+      tipo: document.getElementById('tov_tipo').value,
+      cf: document.getElementById('tov_id_soggetto').value,
+      destinatario: destinatario,
+      data: document.getElementById('tov_data').value,
+      importo: parseFloat(document.getElementById('tov_importo').value) || 0,
+      valuta: document.getElementById('tov_valuta').value,
+      categoria: document.getElementById('tov_categoria').value,
+      modalita_pagamento: document.getElementById('tov_modalita_pagamento').value.toUpperCase().trim(),
+      sorgente: document.getElementById('tov_sorgente').value.toUpperCase().trim(),
+      iva_inclusa: document.getElementById('tov_iva_inclusa').value,
+      aliquota: parseFloat(document.getElementById('tov_aliquota').value) || 0.22,
+      importo_iva: parseFloat(document.getElementById('tov_valore_iva').value) || 0,
+      imponibile: parseFloat(document.getElementById('tov_imponibile').value) || 0,
+      status: 'IN ATTESA',
+      uniqueKey: `${document.getElementById('tov_id_soggetto').value}_${document.getElementById('tov_data').value}_${parseFloat(document.getElementById('tov_importo').value) || 0}`
+    };
+    
+    await add('tov', obj);
+    await writeLog('INSERT', 'TOV', 'ALL', 'NEW_RECORD', JSON.stringify(obj));
+    e.target.reset();
+    
+    document.getElementById('tov_valuta').value = 'EUR';
+    document.getElementById('tov_iva_inclusa').value = 'SI';
+    document.getElementById('tov_aliquota').value = '0.22';
+    
+    renderAll();
+  };
+
+  // ==================== GESTIONE TAB ====================
+  document.querySelectorAll('.tab').forEach(t => t.onclick = (e) => {
+    document.querySelectorAll('.tab, .panel').forEach(x => x.classList.remove('active'));
+    e.target.classList.add('active'); 
+    document.getElementById(e.target.dataset.tab).classList.add('active');
+  });
+
+  document.querySelector('[data-tab="tov"]').addEventListener('click', async () => {
+    const data = await calcolaSoglieAnnuali();
+    let alertCount = 0;
+    data.hcp.forEach(h => {
+      if (h.totaleAnnuale > 1000) alertCount++;
+      h.trasferimenti.forEach(t => { if (parseFloat(t.imponibile) > 100) alertCount++; });
+    });
+    data.hco.forEach(h => {
+      if (h.totaleAnnuale > 2500) alertCount++;
+      h.trasferimenti.forEach(t => { if (parseFloat(t.imponibile) > 1000) alertCount++; });
+    });
+    aggiornaBadgeTov(alertCount);
+  });
+
+  // ==================== INIZIALIZZAZIONE ====================
+  async function init() {
+    const hcpSpecList = document.getElementById('hcp_spec_list');
+    hcpSpecList.innerHTML = OPTS.hcp.map(o => `<option value="${o}">`).join('');
+    const hcoTipoList = document.getElementById('hco_tipo_list');
+    hcoTipoList.innerHTML = OPTS.hco.map(o => `<option value="${o}">`).join('');
+    
+    const countErog = (await getAll('erog')).length;
+    if(countErog === 0) {
+      for (let e of OPTS.erog) {
+        await add('erog', e);
+      }
+    }
+    
+    await syncTovUI();
+    await renderAll();
+    
+    const data = await calcolaSoglieAnnuali();
+    let alertCount = 0;
+    data.hcp.forEach(h => {
+      if (h.totaleAnnuale > 1000) alertCount++;
+      h.trasferimenti.forEach(t => { if (parseFloat(t.imponibile) > 100) alertCount++; });
+    });
+    data.hco.forEach(h => {
+      if (h.totaleAnnuale > 2500) alertCount++;
+      h.trasferimenti.forEach(t => { if (parseFloat(t.imponibile) > 1000) alertCount++; });
+    });
+    aggiornaBadgeTov(alertCount);
+    
+    await mostraRiepilogoXML();
+    await aggiornaRiepilogoInviati();
+    await caricaArchivioSemestri();
+  }
+
+  // Esponi funzioni globali
+  window.mostraTabSoglie = mostraTabSoglie;
+  window.verificaSoglie = verificaSoglie;
+  window.esportaReportSoglie = esportaReportSoglie;
+  window.aggiornaDashboardPerAnno = aggiornaDashboardPerAnno;
+  window.toggleXMLRiepilogo = toggleXMLRiepilogo;
+  window.visualizzaDettaglioXML = visualizzaDettaglioXML;
+  window.cancellaXML = cancellaXML;
+  window.caricaArchivioSemestri = caricaArchivioSemestri;
+  window.toggleSemestre = toggleSemestre;
+  window.exportToExcel = exportToExcel;
+  window.exportFullBackup = exportFullBackup;
+  window.downloadTemplateExcel = downloadTemplateExcel;
+  window.importExcel = importExcel;
+  window.resetTovDateFilter = resetTovDateFilter;
+  window.selectOnlyUnlocked = selectOnlyUnlocked;
+  window.bulkDelete = bulkDelete;
+  window.renderAll = renderAll;
+  window.editRow = editRow;
+  window.delRec = delRec;
+  window.saveRow = saveRow;
+  window.onTipoChange = onTipoChange;
+  window.searchSoggetto = searchSoggetto;
+  window.calcIva = calcIva;
+  window.checkLogin = checkLogin;
+  window.logout = logout;
+</script>
+</body>
+</html>
