@@ -1386,7 +1386,7 @@
     await collections[collectionName]().doc(id).delete();
   }
 
-  async function bulkDelete(collectionName, ids) {
+  async function batchDeleteFromFirestore(collectionName, ids) {
     const batch = db.batch();
     ids.forEach(id => {
       batch.delete(collections[collectionName]().doc(id));
@@ -2134,7 +2134,7 @@
     if (confirm(message + "\n\nSei sicuro di voler procedere?")) {
       try {
         const idsToDelete = deletable.map(r => r.id);
-        await bulkDelete(table, idsToDelete);
+        await batchDeleteFromFirestore(table, idsToDelete);
         await writeLog('BULK_DELETE', table, 'ID_LIST', idsToDelete.join(','), 'DELETED');
         alert(`✅ Eliminazione completata: ${idsToDelete.length} record rimossi.`);
         renderAll();
